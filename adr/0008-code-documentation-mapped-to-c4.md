@@ -14,7 +14,7 @@ date: 2026-11-04
 
 ## Status
 
-Proposed, 2026-11-04. [ADR-0011](0011-architecture-repository.md) (accepted) moves `workspace.dsl` to `LinuxHello/architecture`, pinned here as a submodule; the rules of this ADR stay.
+Proposed, 2026-11-04. [ADR-0011](0011-architecture-repository.md) (accepted) moves `workspace.dsl` to `LinuxHello/architecture`, pinned here as a submodule; the rules of this ADR stay. Amended 2026-11-05: generated code-level diagrams and published rustdoc (see *Amendment 2026-11-05*).
 
 ## Context
 
@@ -45,11 +45,24 @@ Options considered for the link between code and C4:
    | 1 System context | — | `workspace.dsl`, [Arc42 section 3](../arc42/03-context-and-scope.md) |
    | 2 Container | crate | crate root `//!`: ``//! C4 container: `<id>` `` |
    | 3 Component | top-level module (declared in the crate root) | module `//!`: ``//! C4 component: `<id>` `` |
-   | 4 Code | nested modules, types, functions | `///` on every item; no diagram |
+   | 4 Code | nested modules, types, functions | `///` on every item; generated diagrams only (amendment 2026-11-05) |
 
    `<id>` is the element's identifier in `workspace.dsl`. A module's component must belong to the crate's container. A crate that implements a component rather than a container (today only `linuxhello-dbus`, the contract of `dbusApi`) says ``C4 component: `<id>` `` in its root, and its modules need no tag. Component modules live in their own files; inline modules are allowed only under `#[cfg(test)]`.
 5. **`scripts/ci/c4-docs.sh` checks rule 4** against `workspace.dsl`, and `scripts/ci/test-c4-docs.sh` tests the checker. Both run in the `docs` job, which joins `scripts/ci/quality-gates.txt`, so the `quality-gate` attestation ([ADR-0006](0006-attested-quality-gates-and-releases.md)) now also claims documentation.
 6. **Diagrams stay in `workspace.dsl`.** Rustdoc links to it and does not copy diagrams.
+
+### Amendment 2026-11-05: generated code diagrams and published rustdoc
+
+The code level was readable only after a local `cargo doc`: CI built the documentation to check it and discarded it. The maintainer asked for the code level to be visible, with diagrams.
+
+1. **Published rustdoc.** On every push to `main`, CI builds `cargo doc --workspace --no-deps --document-private-items` and publishes it on the repository's GitHub Pages site, with an index that maps each C4 container and component to its crate and module.
+2. **Generated diagrams, never drawn.** The same job generates, for every crate target, a structure tree and a dependency graph (modules, types and traits, with "owns" and "uses" edges) from the code with a pinned `cargo-modules`, rendered by Graphviz. They are published with the rustdoc and never committed: a diagram that is not generated from the commit it describes would drift.
+3. **Not a gate.** The site job is not in `quality-gates.txt` and signs nothing. A pull request builds the site and keeps it as a workflow artifact, so a broken site shows before merge, but it does not block one.
+4. Rule 6 still holds for levels 1 to 3: their diagrams live in `workspace.dsl` only, and doc comments link to it.
+
+**Easier:** reviewers browse every item and see each crate's structure without building anything; a diagram is always the one for the published commit.
+
+**Harder:** one more tool to pin and update (`cargo-modules`, MPL-2.0, run as a tool, not linked); the generated graphs are only as readable as the layout makes them, and large crates may need a per-module focus later; the Pages site is public, like the repository.
 
 ## Consequences
 
