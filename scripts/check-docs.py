@@ -7,6 +7,8 @@
    file or directory in this repository. Anchors and URLs are not checked.
 3. No note uses an Obsidian [[wikilink]].
 
+Code blocks and inline code are examples, not links: they are not checked.
+
 Usage: scripts/check-docs.py [root]   (default: the repository root). Exits 1 on any failure.
 """
 import re
@@ -49,6 +51,7 @@ for note in notes:
             for s in re.findall(r'"([^"]*)"', src.group(1) if src else ""):
                 check_target(note, s, "source")
     body = re.sub(r"```.*?```", "", text, flags=re.S)   # code blocks hold examples, not links
+    body = re.sub(r"(`+)(?!`).*?(?<!`)\1(?!`)", "", body)  # so does inline code, e.g. `[[wikilinks]]`
     for target in re.findall(r"\]\(([^)\s]+)\)", body):
         check_target(note, target, "link")
     if re.search(r"\[\[[^\]]+\]\]", body):
