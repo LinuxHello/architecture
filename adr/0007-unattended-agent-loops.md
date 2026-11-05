@@ -7,7 +7,7 @@ owner: "@atterdag"
 concepts: [ai-assisted-development, governance, supply-chain]
 tags: [adr, process, agents]
 sources: ["0004-agent-roles.md", "0006-attested-quality-gates-and-releases.md", "https://github.com/LinuxHello/linux-hello/blob/main/AGENTS.md", "https://github.com/LinuxHello/linux-hello/blob/main/GOVERNANCE.md"]
-date: 2026-11-03
+date: 2026-11-05
 ---
 
 # ADR-0007: Unattended agent loops
@@ -66,6 +66,22 @@ Unattended commits carry **no `Signed-off-by:`** and need no commit signature, b
 ### Harness by evidence
 
 The harness is chosen by measurement, not by assumption. The lead writes three trial briefs within the current limit (about 300 changed lines, at most five files). Each runs through both candidate harnesses, Aider and Claude Code, on the same local model with the same context window. The harness that passes `make gates` and the test-name check more often becomes the default, and this ADR records the result before acceptance. The brief limit in AGENTS.md stays until the trials show what the model completes within its context.
+
+**Result.** The trials, their protocol, the scoring rule and every run, with the lead's conformance review of each, are recorded in [linux-hello#55](https://github.com/LinuxHello/linux-hello/issues/55).
+
+- Trials 1 ([#53](https://github.com/LinuxHello/linux-hello/issues/53)) and 2 ([#54](https://github.com/LinuxHello/linux-hello/issues/54)) had no successful run for either harness.
+- Trial 3 ([#38](https://github.com/LinuxHello/linux-hello/issues/38)) had no successful run either, and was split into 3a ([#61](https://github.com/LinuxHello/linux-hello/issues/61)), 3b ([#62](https://github.com/LinuxHello/linux-hello/issues/62)) and 3c ([#63](https://github.com/LinuxHello/linux-hello/issues/63)), each run with both harnesses.
+- Accepted as delivered: Aider 1 (3c, [#81](https://github.com/LinuxHello/linux-hello/pull/81)), Claude Code 0. #81 was closed unmerged because Claude Code's run on the same brief had already been merged.
+- Accepted after a small lead fix-up: Aider on 3a ([#64](https://github.com/LinuxHello/linux-hello/pull/64)); Claude Code on 3b ([#79](https://github.com/LinuxHello/linux-hello/pull/79), fix-up [#80](https://github.com/LinuxHello/linux-hello/pull/80)). Claude Code's 3c run ([#82](https://github.com/LinuxHello/linux-hello/pull/82)) passed the gates but broke the brief's constraints and needed fix-up [#83](https://github.com/LinuxHello/linux-hello/pull/83).
+- Claude Code was faster, and it was the only harness to pass in a first round (3b, about 3 minutes).
+
+By the scoring rule (more successes, then fewer repair rounds, then less time) Aider wins 1–0. **The maintainer chose Aider as the default `LH_HARNESS`.**
+
+What the trials showed, and what follows from them:
+
+- **Workstation fixes.** Both harnesses depend on fixes made in the private workstation configuration during the trials: the model's thinking is switched off, and Claude Code's reply reserve is reduced so that compaction leaves room to work. Without them no run of trial 3 got through.
+- **Brief limit.** The limit in AGENTS.md (about 300 changed lines, at most five files) stays.
+- **Lead conformance review stays mandatory.** The gates alone accepted runs that broke their brief (#82 among them), so a run that passes the gates still reaches the maintainer only after the lead has probed it against its brief.
 
 ### What stays with the maintainer
 
