@@ -1,0 +1,63 @@
+name: Docs
+
+# Checks of this repository (ADR-0011, "architecture's own checks"). No Rust gates.
+# Actions are pinned to commit SHAs; Dependabot updates them. Job ids equal check names.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  notes:
+    name: notes
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Every note has frontmatter, its relative links resolve, no wikilinks
+        run: python3 -I scripts/check-docs.py
+
+  dsl:
+    name: dsl
+    runs-on: ubuntu-24.04
+    env:
+      # Structurizr CLI, checksum of the release asset as GitHub records it.
+      CLI_URL: https://github.com/structurizr/cli/releases/download/v2025.11.09/structurizr-cli.zip
+      CLI_SHA256: f5365a463fc44d539ed19bec00c48ba1e1ecda0ccfd1ba40d2e7472d264eb79a
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install the pinned Structurizr CLI
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --proto '=https' --output "$RUNNER_TEMP/cli.zip" "$CLI_URL"
+          echo "$CLI_SHA256  $RUNNER_TEMP/cli.zip" | sha256sum --check --strict --quiet -
+          unzip -q "$RUNNER_TEMP/cli.zip" -d "$RUNNER_TEMP/structurizr"
+      - name: The C4 model parses
+        run: bash "$RUNNER_TEMP/structurizr/structurizr.sh" validate -workspace workspace.dsl
+
+  # Advisory: would linux-hello's code still name valid C4 elements with this model?
+  # It does not block, because the code may follow in its own pull request (ADR-0011).
+  c4-code:
+    name: c4-code (advisory)
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: architecture
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: LinuxHello/linux-hello
+          path: linux-hello
+      - name: linux-hello's crates name elements of this workspace.dsl
+        working-directory: linux-hello
+        run: |
+          set -euo pipefail
+          # Before linux-hello pins this repository (#72) its checker reads
+          # docs/architecture/workspace.dsl; afterwards architecture/workspace.dsl.
+          if [ -d architecture ]; then dest=architecture; else dest=docs/architecture; fi
+          mkdir -p "$dest"
+          cp ../architecture/workspace.dsl "$dest/workspace.dsl"
+          bash scripts/ci/c4-docs.sh

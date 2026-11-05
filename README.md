@@ -9,7 +9,28 @@ The architecture of [Linux Hello](https://github.com/LinuxHello/linux-hello) at 
 
 The code level stays with the code, in `linux-hello`'s doc comments, and `linux-hello` pins this repository as a submodule to check them against the C4 model. The security properties and the policy semantics also stay in `linux-hello`, because tests and code quote them.
 
-The content moves here from `linux-hello` with its history ([#71](https://github.com/LinuxHello/linux-hello/issues/71)). Issues are tracked in [`linux-hello`](https://github.com/LinuxHello/linux-hello/issues).
+The content moved here from `linux-hello` at commit [`3212f15`](https://github.com/LinuxHello/linux-hello/tree/3212f15/docs) ([#71](https://github.com/LinuxHello/linux-hello/issues/71)). Its earlier history is in `linux-hello`: `git log -- docs/adr docs/architecture docs/spikes`. Issues are tracked in [`linux-hello`](https://github.com/LinuxHello/linux-hello/issues).
+
+## Contents
+
+| Path | What |
+| :-- | :-- |
+| [arc42/](arc42/README.md) | One note per Arc42 section, with the index of sections and their state ([ADR-0010](adr/0010-arc42-architecture-documentation.md)) |
+| [workspace.dsl](workspace.dsl) | The C4 model in Structurizr DSL: system context, containers, components |
+| [adr/](adr/README.md) | Architecture decision records |
+| [spikes/](spikes/README.md) | Spikes that test the assumptions the architecture rests on |
+| [templates/](templates/) | Templates for ADRs, spikes and notes |
+
+The repository is an Obsidian vault. Links are relative Markdown links, never wikilinks, so the notes render on GitHub too.
+
+## Checks
+
+| Check | What it checks | Required |
+| :-- | :-- | :-- |
+| `dco` | every commit is signed off | yes |
+| `notes` | frontmatter, relative links, no wikilinks ([scripts/check-docs.py](scripts/check-docs.py)) | yes |
+| `dsl` | `workspace.dsl` parses (Structurizr CLI) | yes |
+| `c4-code (advisory)` | `linux-hello`'s crates still name elements of the proposed model | no: the code may follow in its own pull request |
 
 ## Contributing
 
