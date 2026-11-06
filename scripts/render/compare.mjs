@@ -11,11 +11,36 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** The words of an SVG in document order, with <style> blocks and markup left out. */
+/** The SVG without its <style> blocks. */
+function withoutStyles(svg) {
+  let out = '';
+  let from = 0;
+  for (;;) {
+    const start = svg.indexOf('<style', from);
+    if (start === -1) return out + svg.slice(from);
+    const end = svg.indexOf('</style>', start);
+    if (end === -1) return out + svg.slice(from, start);
+    out += svg.slice(from, start);
+    from = end + '</style>'.length;
+  }
+}
+
+// The export's hidden metadata line, a date such as "Friday, 6 November 2026 at 21:20 ...",
+// whose format depends on the browser's locale. It says nothing about the model.
+const TIMESTAMP = /^(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day, /;
+
+/** The words of an SVG in document order, with <style> blocks, markup and the timestamp left out. */
 export function words(svg) {
-  const body = svg.replace(/<style[\s\S]*?<\/style>/g, '');
+  const body = withoutStyles(svg);
   const out = [];
-  for (const m of body.matchAll(/>([^<]+)</g)) out.push(...m[1].split(/\s+/).filter(Boolean));
+  let i = 0;
+  while ((i = body.indexOf('>', i)) !== -1) {
+    const j = body.indexOf('<', i + 1);
+    if (j === -1) break;
+    const text = body.slice(i + 1, j).trim();
+    if (text && !TIMESTAMP.test(text)) out.push(...text.split(/\s+/));
+    i = j;
+  }
   return out;
 }
 

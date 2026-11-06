@@ -19,7 +19,8 @@ const browser = await chromium.launch({
   args: process.env.CI ? ['--no-sandbox'] : [],
 });
 try {
-  const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+  // A fixed locale and time zone keep the export's date line the same on every machine.
+  const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, locale: 'en-GB', timezoneId: 'UTC' });
   await page.goto(`${base}/workspace/1/diagrams`);
   await page.waitForFunction(() => window.structurizr?.scripting?.getViews, null, { timeout: 30000 });
 
@@ -54,7 +55,7 @@ try {
     }, key);
     if (typeof svg !== 'string' || svg.includes('NaN')) throw new Error(`view ${key}: the export is empty or has NaN sizes`);
     // The export carries a hidden timestamp; drop it so an unchanged model gives an unchanged file.
-    const clean = svg.replace(/>[A-Z][a-z]+day, \d+ [A-Za-z]+ \d{4} at [^<]*</g, '><');
+    const clean = svg.replace(/>(?:Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day, [^<]*</g, '><');
     writeFileSync(join(outDir, `${key}.svg`), clean);
     console.log(`rendered ${key} (${clean.length} bytes)`);
   }

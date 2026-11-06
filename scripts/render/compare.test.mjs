@@ -21,6 +21,13 @@ test('an added element is a difference', () => {
   assert.ok(!sameWords(svg('PIN Manager'), svg('PIN Manager', 'Reset Coordinator')));
 });
 
+test('the export timestamp is not a word, in any locale', () => {
+  const stamped = (t) => `<svg><text><tspan display="none">${t}</tspan><tspan>Agent</tspan></text></svg>`;
+  assert.ok(sameWords(stamped('Friday, 6 November 2026 at 21:20 Central European Standard Time'),
+    stamped('Friday, November 6, 2026 at 8:45 PM Coordinated Universal Time')));
+  assert.ok(sameWords(stamped('Friday, November 6, 2026 at 8:45 PM Coordinated Universal Time'), '<svg><text><tspan>Agent</tspan></text></svg>'));
+});
+
 test('style rules are not words', () => {
   assert.deepEqual(words(svg('Agent')), ['Agent']);
 });
