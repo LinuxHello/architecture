@@ -22,18 +22,29 @@ Every file here is generated from [workspace.dsl](../workspace.dsl), which stays
 
 The diagrams are large because the auto-layout spreads each view over many ranks. They are vector images: open one on its own to zoom.
 
-## Rendering procedure
+## Rendering
 
-Rendered 2026-11-06 with Structurizr v2026.09.19 (`structurizr/structurizr` container image, `local` mode, DSL only), from the `workspace.dsl` of this repository at the commit that introduced these files. The procedure was **run by hand, not scripted, and is not checked in CI**, so an image can drift from the DSL until someone renders again.
+After you change [workspace.dsl](../workspace.dsl), render again and commit the result:
 
-1. Start Structurizr in `local` mode on a copy of `workspace.dsl`, so it cannot write into this repository.
-2. Open `/workspace/1/diagrams` in a browser with a viewport of at least 1600 by 1000.
-3. For each view key, call `structurizr.scripting.changeView(key)`, wait for `structurizr.scripting.isDiagramRendered()`, then `await structurizr.scripting.exportCurrentDiagramToSVG({includeMetadata: false})`.
-4. Delete the hidden export timestamp (a `display="none"` text) so a render of an unchanged DSL gives an unchanged file.
+```bash
+scripts/render-diagrams.sh
+```
 
-Known quirk at this Structurizr version: the first view to load (`Context`) came out empty (`NaN` size) until its `dimensions` were set, in the page, to 4500 by 3800 before switching to it. Check every file for `NaN` after rendering.
+The script checks its own prerequisites (docker or podman, node and npm, Chrome). It starts the pinned `structurizr/structurizr` image (v2026.09.19, `local` mode) on a scratch copy of the DSL, so Structurizr cannot write into this repository. It then drives the diagram page in headless Chrome with Playwright, exports each view with `structurizr.scripting.exportCurrentDiagramToSVG`, and writes `diagrams/<view key>.svg`.
+
+Two workarounds are in [scripts/render/render.mjs](../scripts/render/render.mjs):
+
+- At this Structurizr version a view with no saved dimensions (the first to load, in practice `Context`) is drawn with `NaN` sizes. The script gives such views the size their elements need, and fails if any export still contains `NaN`.
+- The export carries a hidden timestamp. The script removes it, so an unchanged model gives an unchanged file.
+
+## Check in CI
+
+`scripts/render-diagrams.sh --check` renders to a temporary directory and compares it with `diagrams/`. The `diagrams` job in [docs.yml](../.github/workflows/docs.yml) runs it on every pull request. It compares **words, not bytes**: an element's name, description and technology and every relationship label are text in the SVG, so a changed model changes the words, while the font on the machine only changes geometry and line wrapping. On failure the job uploads the fresh render as the `rendered-diagrams` artifact.
+
+What the check does not catch: a change that moves or restyles an element without changing any text, such as a new `styles` rule or a layout setting. Render again by hand after those.
 
 ## Open
 
-- **Not tested:** how GitHub's renderer and Obsidian display these files. Fonts fall back from Tahoma to what the viewer has.
-- **Gap:** no CI check that the images match the DSL. A scripted headless export (`structurizr export` with a PNG or SVG format needs a Structurizr URL and a headless browser) would close it.
+- **Tested:** the script and the comparison ran locally (Chrome 157, Node 22, rootless podman). A changed description in the DSL made the check fail, and the committed images pass.
+- **Not tested:** the `diagrams` job on a GitHub-hosted runner (Docker, the runner's Chrome, `--no-sandbox`), and how GitHub and Obsidian display the SVGs. Fonts fall back from Tahoma to what the viewer has.
+- **Not tracked by Dependabot:** the Structurizr image digest in `scripts/render-diagrams.sh`. Update it by hand when you upgrade Structurizr, then render again.

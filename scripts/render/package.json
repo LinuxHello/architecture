@@ -1,0 +1,9 @@
+{
+  "name": "architecture-render-diagrams",
+  "private": true,
+  "type": "module",
+  "description": "Renders the C4 views of workspace.dsl to SVG (scripts/render-diagrams.sh)",
+  "dependencies": {
+    "playwright-core": "1.65.0"
+  }
+}

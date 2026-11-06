@@ -31,6 +31,7 @@ The repository is an Obsidian vault. Links are relative Markdown links, never wi
 | `dco` | every commit is signed off | yes |
 | `notes` | frontmatter, relative links, no wikilinks ([scripts/check-docs.py](scripts/check-docs.py)) | yes |
 | `dsl` | `workspace.dsl` parses (Structurizr CLI) | yes |
+| `diagrams` | the images in [diagrams/](diagrams/README.md) say the same words as a fresh render of `workspace.dsl` | no: add it to the branch rules after it has run green a few times |
 | `c4-code (advisory)` | `linux-hello`'s crates still name elements of the proposed model | no: the code may follow in its own pull request |
 
 ## Contributing

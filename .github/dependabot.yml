@@ -4,3 +4,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  - package-ecosystem: npm
+    directory: /scripts/render
+    schedule:
+      interval: weekly
