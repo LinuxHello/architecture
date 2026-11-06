@@ -83,6 +83,13 @@ What the trials showed, and what follows from them:
 - **Brief limit.** The limit in AGENTS.md (about 300 changed lines, at most five files) stays.
 - **Lead conformance review stays mandatory.** The gates alone accepted runs that broke their brief (#82 among them), so a run that passes the gates still reaches the maintainer only after the lead has probed it against its brief.
 
+**Found after the trials.** The first runs with Aider as the default (#39, #40, #85) showed two faults in how the workstation script drove Aider. Both worked against Aider in the trials, and neither affected Claude Code:
+
+- **URL fetching.** Aider offers to fetch every URL in the conversation, and the script's `--yes-always` accepted. Every clippy error links to its lint page, so a repair round after a lint failure pasted Clippy's documentation into the prompt: 598k tokens for the 64k window on [#39](https://github.com/LinuxHello/linux-hello/issues/39), and most likely the 294k-token prompt of trial 2.
+- **Files appended to themselves.** In Aider's diff format an edit block with an empty SEARCH section creates a file, and on an existing file Aider appends it. The model rewrites files that way whatever the brief says, so `restrict.rs` (3a), `merge.rs` (3b), `query.rs` ([#40](https://github.com/LinuxHello/linux-hello/issues/40)) and `view.rs` ([#85](https://github.com/LinuxHello/linux-hello/issues/85)) ended up holding copies of themselves, and the repair rounds never recovered.
+
+The workstation script now runs Aider with URL detection off, in its `whole` edit format (each reply replaces the file), and stops a run as soon as a file holds a second copy of itself. With them, the trials' numbers understate what Aider can do; they do not change the choice. The fixes are untested against a live model until the next run.
+
 ### What stays with the maintainer
 
 Merging, DCO certification, accepting ADRs, releases, repository and organisation settings, and creating the implementer's credential.
