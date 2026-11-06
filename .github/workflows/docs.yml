@@ -39,6 +39,27 @@ jobs:
       - name: The C4 model parses
         run: bash "$RUNNER_TEMP/structurizr/structurizr.sh" validate -workspace workspace.dsl
 
+  # The images in diagrams/ are rendered from workspace.dsl (diagrams/README.md). This job renders
+  # the DSL again, with the pinned Structurizr image and the runner's Chrome, and fails when the
+  # words of an image differ from the committed one. It compares text, not bytes: fonts change
+  # geometry and line wrapping, but not the words. Fix: run scripts/render-diagrams.sh.
+  diagrams:
+    name: diagrams
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: The image comparison tells a changed model from a changed font
+        run: node --test scripts/render/compare.test.mjs
+      - name: diagrams/ matches workspace.dsl
+        run: bash scripts/render-diagrams.sh --check --out "$RUNNER_TEMP/rendered-diagrams"
+      - name: Keep the fresh render so it can be committed
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rendered-diagrams
+          path: ${{ runner.temp }}/rendered-diagrams/*.svg
+          if-no-files-found: ignore
+
   # Advisory: would linux-hello's code still name valid C4 elements with this model?
   # It does not block, because the code may follow in its own pull request (ADR-0011).
   c4-code:
