@@ -7,7 +7,7 @@ owner: "@atterdag"
 concepts: [governance]
 tags: [adr, index]
 sources: []
-date: 2026-11-01
+date: 2026-11-06
 ---
 
 # Architecture decision records
@@ -23,5 +23,6 @@ date: 2026-11-01
 - [ADR-0009: A self-hosted runner on the maintainer's workstation](0009-self-hosted-runner.md) (proposed)
 - [ADR-0010: Architecture documentation structured by Arc42](0010-arc42-architecture-documentation.md) (proposed)
 - [ADR-0011: An architecture repository](0011-architecture-repository.md)
+- [ADR-0012: D-Bus names](0012-dbus-names.md)
 
 New ADRs start from [the template](../templates/adr.md).
