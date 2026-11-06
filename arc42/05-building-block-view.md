@@ -12,13 +12,15 @@ date: 2026-11-05
 
 # 5. Building block view
 
-Part of the [Arc42 architecture documentation](README.md). C4 diagrams live only in [workspace.dsl](../workspace.dsl) ([ADR-0008](../adr/0008-code-documentation-mapped-to-c4.md)); this section names the views and does not redraw them. The code names the container or component it implements, and CI checks it against the workspace.
+Part of the [Arc42 architecture documentation](README.md). C4 diagrams are defined only in [workspace.dsl](../workspace.dsl) ([ADR-0008](../adr/0008-code-documentation-mapped-to-c4.md)); the images here are rendered from it and are never edited ([how](../diagrams/README.md)). The code names the container or component it implements, and CI checks it against the workspace.
 
 Levels: System Context ([section 3](03-context-and-scope.md)), Container, and one Component view per container. Code level deferred until a Rust skeleton exists. DSL **untested**: validate with the Structurizr CLI before committing.
 
 ## 5.1 Level 1: containers
 
 C4 view: `container linuxHello "Containers"` in [workspace.dsl](../workspace.dsl).
+
+![C4 container view of Linux Hello: the Agent, pam_linuxhello, TPM and KeePassXC providers, Plasma integration, linuxhello-ctl, policy files and security profiles](../diagrams/Containers.svg)
 
 | Container | Technology | Responsibility |
 | :-- | :-- | :-- |
@@ -47,6 +49,34 @@ One C4 component view per container in [workspace.dsl](../workspace.dsl):
 | `Plasma` | `plasma` |
 | `CLI` | `cli` |
 | `SecurityProfiles` | `secProfiles` |
+
+### Agent
+
+![C4 component view of Linux Hello Agent](../diagrams/Agent.svg)
+
+### PAM
+
+![C4 component view of pam_linuxhello](../diagrams/PAM.svg)
+
+### TPMProvider
+
+![C4 component view of TPM Credential Provider](../diagrams/TPMProvider.svg)
+
+### KeePassXCBridge
+
+![C4 component view of KeePassXC Provider Bridge](../diagrams/KeePassXCBridge.svg)
+
+### Plasma
+
+![C4 component view of Plasma Integration](../diagrams/Plasma.svg)
+
+### CLI
+
+![C4 component view of linuxhello-ctl](../diagrams/CLI.svg)
+
+### SecurityProfiles
+
+![C4 component view of Security Profiles](../diagrams/SecurityProfiles.svg)
 
 The components that the user-experience design adds are listed in [section 8, Additions to the C4 model](08-crosscutting-concepts.md#additions-to-the-c4-model).
 

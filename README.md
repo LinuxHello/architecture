@@ -17,6 +17,7 @@ The content moved here from `linux-hello` at commit [`3212f15`](https://github.c
 | :-- | :-- |
 | [arc42/](arc42/README.md) | One note per Arc42 section, with the index of sections and their state ([ADR-0010](adr/0010-arc42-architecture-documentation.md)) |
 | [workspace.dsl](workspace.dsl) | The C4 model in Structurizr DSL: system context, containers, components |
+| [diagrams/](diagrams/README.md) | SVG renderings of every C4 view, generated from `workspace.dsl` |
 | [adr/](adr/README.md) | Architecture decision records |
 | [spikes/](spikes/README.md) | Spikes that test the assumptions the architecture rests on |
 | [templates/](templates/) | Templates for ADRs, spikes and notes |
