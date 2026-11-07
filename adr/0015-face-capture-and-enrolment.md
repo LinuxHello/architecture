@@ -2,7 +2,7 @@
 type: adr
 subject: Face enrolment and matching call Howdy as it is; a live preview is not part of 1.0
 artifact: adr
-status: proposed
+status: accepted
 owner: "@atterdag"
 concepts: [howdy, face, enrolment, preview, camera]
 tags: [adr, face]
@@ -14,7 +14,7 @@ date: 2026-11-08
 
 ## Status
 
-Proposed, 2026-11-08.
+Accepted, 2026-11-08, on the maintainer's decision the same day (proposed 2026-11-08).
 
 ## Context
 

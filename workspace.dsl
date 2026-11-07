@@ -2,7 +2,7 @@
  * Linux Hello — C4 workspace (System Context, Container, Component)
  * Source notes: docs/architecture/ (Arc42 sections, README.md)
  * Status: draft, UNTESTED — validate with the Structurizr CLI before use.
- * Date: 2026-11-08 (ADR-0005 option B; spikes 0008-0012 and 0014)
+ * Date: 2026-11-08 (ADR-0005 option B; ADR-0014 to 0017; spikes 0008-0012 and 0014)
  */
 workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the Linux desktop" {
 
@@ -12,8 +12,8 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
 
         linuxHello = softwareSystem "Linux Hello" "PIN-rooted, biometric-unlocked credential layer integrating upstream Linux components" {
 
-            agent = container "Linux Hello Agent" "Unlock state, auth state, routing policy, PIN, enrolment and reset orchestration" "Rust daemon, D-Bus" {
-                dbusApi = component "D-Bus API" "io.github.LinuxHello.Agent1; verifies peer credentials of every caller" "zbus"
+            agent = container "Linux Hello Agent" "Unlock state, auth state, routing policy, PIN, enrolment and reset orchestration" "Rust daemon, systemd system service, D-Bus on the system bus (ADR-0014)" {
+                dbusApi = component "D-Bus API" "io.github.LinuxHello.Agent1 on the system bus; verifies peer credentials of every caller, keeps state per uid and sends it by method reply or unicast signal, never a broadcast that names a user or a method (ADR-0014)" "zbus"
                 unlockState = component "Unlock State Manager" "Session unlock, expiry and re-prompt rules; state proven by TPM policy sessions, not flags" "Rust"
                 authState = component "Auth State Publisher" "Signals MethodsAvailable, ActiveMethod, State, Result per prompt (UX1-UX4)" "zbus signals"
                 policyEngine = component "Routing Policy Engine" "Merges default, user and admin layers; answers allowed methods per context, provider and prompt level per relying party, PIN rules; fails closed on unparseable policy" "Rust"
@@ -49,11 +49,9 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
             plasma = container "Plasma Integration" "Prompts, greeter and lock-screen integration, enrolment and settings" "Rust/cxx-qt, QML, KCM" {
                 authPrompt = component "Auth Prompt QML Component" "Shared method indicator and switcher; renders Agent auth state (UX1-UX5). One QML module in the system QML directory, imported by every host below (spike 0009)" "QML"
                 promptUi = component "Prompt UI" "In-session user-presence and provider-choice dialogs, outside the calling app" "QML"
-                sddmTheme = component "SDDM Theme" "Theme package that embeds the shared prompt in SDDM; a Breeze fork or an upstream patch, chosen by ADR (spike 0009). The Plasma Login Manager needs an upstream patch" "QML"
-                lockScreenPackage = component "Lock Screen Shell Package" "Embeds the shared prompt in the lock screen: stock Face and Fingerprint service names (text only, 6.8 and later), a fork limited to lockscreen/, or an upstream slot; chosen by ADR (spike 0009)" "QML, Plasma shell package"
+                sddmTheme = component "SDDM Theme" "Own theme package (a Breeze fork) that embeds the shared prompt in SDDM (ADR-0016). The Plasma Login Manager needs an upstream change and is not part of 1.0" "QML"
                 kcm = component "Linux Hello Settings Module" "Own settings page next to Users in System Settings (kcm_users has no extension point, spike 0010): methods, policy (UX7a)" "KCM, QML"
-                cameraStreams = component "Camera Stream Owner" "Opens the RGB and IR streams in a fixed order with a retry; falls back to no live RGB preview, because starting both together failed on the BRIO (spike 0012)" "Rust, V4L2"
-                faceEnrol = component "Face Enrolment Module" "RGB preview, guidance overlay, capture, test, delete (UX6, UX6a). Howdy gives no preview or detection results (spike 0008), so a Linux Hello capture-and-detect component is needed; ADR pending" "QML, Rust"
+                faceEnrol = component "Face Enrolment Module" "Capture, recognition test and delete through Howdy; status text and the test result, no live preview in 1.0 (ADR-0015; UX6a deferred)" "QML, Rust"
                 pinSettings = component "PIN Settings" "Change PIN, rules, lockout status, forgot-PIN link (UX7b)" "QML"
                 wizard = component "Enrolment Wizard" "First run: PIN, then optional face and fingerprint (UX8)" "QML"
                 usersKcmPatch = component "Users Page Entries" "Optional, not planned: Face and PIN entries beside fingerprint need an upstream change to kcm_users in plasma-workspace (spike 0010)" "QML patch"
@@ -80,7 +78,7 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
         howdy = softwareSystem "Howdy" "IR face recognition (MIT). Match as a subprocess (exit status); enrol and test as a root CLI; no library, D-Bus API, preview or detection results (spike 0008)" "External"
         linuxPam = softwareSystem "Linux-PAM" "Pluggable authentication framework" "External"
         tpm = softwareSystem "TPM 2.0" "Kernel resource manager /dev/tpmrm0" "External"
-        camera = softwareSystem "Camera" "UVC camera with RGB and IR as separate V4L2 nodes; the BRIO streams both together only in some start orders (spike 0012); PipeWire coexistence untested" "External"
+        camera = softwareSystem "Camera" "UVC camera with RGB and IR as separate V4L2 nodes; Howdy holds the IR stream while it captures; the BRIO streams RGB and IR together only in some start orders (spike 0012)" "External"
         secretService = softwareSystem "Secret Service (KWallet)" "Token and secret storage" "External"
         loginManager = softwareSystem "Plasma login manager" "Graphical login: SDDM, or the Plasma Login Manager from Plasma 6.8" "External"
         lockScreen = softwareSystem "kscreenlocker" "Plasma lock screen; a part of the Plasma shell package from 6.8" "External"
@@ -111,15 +109,13 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
         browsers -> relyingParties "WebAuthn ceremonies" "HTTPS"
         uhid -> ctapHelper "Delivers CTAP2 reports" "/dev/uhid"
         loginManager -> linuxPam "Authenticates via"
-        lockScreen -> linuxPam "Authenticates via"
+        lockScreen -> linuxPam "Authenticates via the stock kde, kde-face and kde-fingerprint services; text only on 6.8, inside the kde service on 6.6 (ADR-0016)"
 
         # KDE integration
         loginManager -> sddmTheme "Loads theme" "QML"
-        lockScreen -> lockScreenPackage "Loads shell package" "QML"
         sddmTheme -> authPrompt "Embeds"
-        lockScreenPackage -> authPrompt "Embeds"
         promptUi -> authPrompt "Embeds"
-        authPrompt -> dbusApi "Subscribes to auth state, selects method; the system bus is the only bus every surface reaches, bus ADR pending (spikes 0007, 0009)" "D-Bus"
+        authPrompt -> dbusApi "Subscribes to auth state, selects method, over the system bus (ADR-0014)" "D-Bus"
         systemSettings -> kcm "Hosts" "KCM"
         systemSettings -> usersKcmPatch "Shows entries on Users page"
         usersKcmPatch -> faceEnrol "Opens"
@@ -130,9 +126,8 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
         kcm -> policyStore "Writes user policy" "TOML"
         wizard -> dbusApi "Starts enrolment" "D-Bus"
         wizard -> systemSettings "Hands off fingerprint enrolment to Users page"
-        faceEnrol -> cameraStreams "Preview and capture frames"
-        cameraStreams -> camera "Reads RGB (display only) and IR" "V4L2"
-        faceEnrol -> howdy "Enrol, test, delete through the howdy CLI; no preview or detection results" "subprocess"
+        faceEnrol -> howdy "Enrol, test, delete through the howdy CLI in a privileged Agent helper; no preview or detection results (ADR-0015)" "subprocess"
+        howdy -> camera "Reads the IR stream while it captures" "V4L2"
         pinSettings -> dbusApi "Change PIN, lockout status" "D-Bus"
         ctapHelper -> promptUi "User-presence and choice prompts" "D-Bus"
         promptUi -> dbusApi "Reads routing decision, authenticates" "D-Bus"

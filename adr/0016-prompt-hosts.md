@@ -2,7 +2,7 @@
 type: adr
 subject: One shared prompt module; the lock screen uses the stock Face and Fingerprint services, SDDM gets an own theme
 artifact: adr
-status: proposed
+status: accepted
 owner: "@atterdag"
 concepts: [plasma, sddm, kscreenlocker, qml, prompt]
 tags: [adr, plasma, ux]
@@ -14,7 +14,7 @@ date: 2026-11-08
 
 ## Status
 
-Proposed, 2026-11-08.
+Accepted, 2026-11-08, on the maintainer's decision the same day (proposed 2026-11-08).
 
 ## Context
 

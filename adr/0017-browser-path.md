@@ -2,7 +2,7 @@
 type: adr
 subject: Browsers reach Linux Hello as a USB security key in 1.0; the own extension is deferred
 artifact: adr
-status: proposed
+status: accepted
 owner: "@atterdag"
 concepts: [webauthn, browser, virtual-ctap, extension]
 tags: [adr, browser]
@@ -14,7 +14,7 @@ date: 2026-11-08
 
 ## Status
 
-Proposed, 2026-11-08. Supersedes [ADR-0013](0013-browser-fallback.md), which is still proposed.
+Accepted, 2026-11-08, on the maintainer's decision the same day (proposed 2026-11-08). Supersedes [ADR-0013](0013-browser-fallback.md), which is still proposed.
 
 ## Context
 

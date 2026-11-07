@@ -2,7 +2,7 @@
 type: adr
 subject: The 1.0 browser path is an own web extension and native-messaging host in front of the broker, until browsers call the credentials portal
 artifact: adr
-status: proposed
+status: superseded
 owner: "@atterdag"
 concepts: [webauthn, browser-extension, native-messaging, origin, snap, flatpak]
 tags: [adr, upstream]
@@ -14,7 +14,7 @@ date: 2026-11-07
 
 ## Status
 
-Proposed, 2026-11-07. Superseded by [ADR-0017](0017-browser-path.md) (proposed, 2026-11-08), which takes the browser path from ADR-0005 option B.
+Proposed, 2026-11-07. Superseded by [ADR-0017](0017-browser-path.md) (accepted, 2026-11-08), which takes the browser path from ADR-0005 option B.
 
 ## Context
 
