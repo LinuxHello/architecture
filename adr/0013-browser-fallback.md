@@ -14,7 +14,7 @@ date: 2026-11-07
 
 ## Status
 
-Proposed, 2026-11-07.
+Proposed, 2026-11-07. Superseded by [ADR-0017](0017-browser-path.md) (proposed, 2026-11-08), which takes the browser path from ADR-0005 option B.
 
 ## Context
 
