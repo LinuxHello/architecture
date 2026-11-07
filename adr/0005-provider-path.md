@@ -1,6 +1,6 @@
 ---
 type: adr
-subject: How the TPM provider and the KeePassXC bridge attach while credentialsd has no provider API
+subject: How the TPM provider and the KeePassXC bridge attach: a virtual CTAP authenticator, no credentialsd
 artifact: adr
 status: accepted
 owner: "@atterdag"
@@ -10,7 +10,7 @@ sources: ["../spikes/0005-credentialsd-provider-api.md", "../arc42/02-constraint
 date: 2026-11-08
 ---
 
-# ADR-0005: How providers attach while credentialsd has no provider API
+# ADR-0005: How providers attach: a virtual CTAP authenticator, no credentialsd
 
 ## Status
 
