@@ -7,7 +7,7 @@ owner: "@atterdag"
 concepts: [spikes]
 tags: [spike, m0, index]
 sources: []
-date: 2026-11-06
+date: 2026-11-07
 ---
 
 # Spikes
@@ -25,6 +25,7 @@ date: 2026-11-06
 | [0012: Camera streams RGB and IR at the same time](0012-camera-rgb-ir-concurrent.md) | Open | [#12](https://github.com/LinuxHello/linux-hello/issues/12) |
 | [0014: Trademark risk of the name Linux Hello](0014-name-trademark-risk.md) | Open | [#14](https://github.com/LinuxHello/linux-hello/issues/14) |
 | [0031: credentialsd with the patched portal and its GTK backend on Plasma](0031-credentialsd-portal-on-plasma.md) | Open | [#31](https://github.com/LinuxHello/linux-hello/issues/31) |
+| [0033: Own browser extension in front of the broker: trusted origin, and native messaging from confined browsers](0033-own-extension-origin-and-confined-native-messaging.md) | Open (source read: Partly; origin solvable by design, confined Firefox needs the native-messaging proxy, untested on Plasma) | [#33](https://github.com/LinuxHello/linux-hello/issues/33) |
 
 New spikes start from [the template](../templates/spike.md). See [index](../README.md).
 
@@ -49,6 +50,7 @@ flowchart LR
     S12["0012 RGB and IR camera"]:::open
     S14["0014 name trademark risk"]:::open
     S31["0031 portal on Plasma"]:::open
+    S33["0033 own extension and native messaging"]:::open
 
     T1["Provider path (ADR-0005)"]:::target
     T2["Browser fallback decision (#33)"]:::target
@@ -67,6 +69,7 @@ flowchart LR
     S5 --> T1
     S5 --> S31
     S6 --> T2
+    S33 --> T2
     S7 --> T3
     S7 --> S9
     S8 --> T4
@@ -82,4 +85,4 @@ flowchart LR
     S31 --> T13
 ```
 
-Edges come from the *Blocks* and *Why it matters* sections of the issues, plus the follow-up links in [0009](0009-plasma-prompt-component.md) and [0031](0031-credentialsd-portal-on-plasma.md). Spike 0013 blocks nothing open: it settled the licence boundaries.
+Edges come from the *Blocks* and *Why it matters* sections of the issues, plus the follow-up links in [0009](0009-plasma-prompt-component.md), [0031](0031-credentialsd-portal-on-plasma.md) and [0033](0033-own-extension-origin-and-confined-native-messaging.md). Spike 0013 blocks nothing open: it settled the licence boundaries.
