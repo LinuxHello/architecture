@@ -7,7 +7,7 @@ owner: "@atterdag"
 concepts: [governance]
 tags: [adr, index]
 sources: []
-date: 2026-11-06
+date: 2026-11-07
 ---
 
 # Architecture decision records
@@ -24,5 +24,6 @@ date: 2026-11-06
 - [ADR-0010: Architecture documentation structured by Arc42](0010-arc42-architecture-documentation.md) (proposed)
 - [ADR-0011: An architecture repository](0011-architecture-repository.md)
 - [ADR-0012: D-Bus names](0012-dbus-names.md)
+- [ADR-0013: Browser path for 1.0](0013-browser-fallback.md) (proposed)
 
 New ADRs start from [the template](../templates/adr.md).
