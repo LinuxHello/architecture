@@ -7,7 +7,7 @@ owner: "@atterdag"
 concepts: [risks, open-questions, spikes, arc42]
 tags: [architecture, arc42]
 sources: ["README.md", "../spikes/README.md", "https://docs.arc42.org/section-11/"]
-date: 2026-11-07
+date: 2026-11-08
 ---
 
 # 11. Risks and technical debt
@@ -16,7 +16,7 @@ Part of the [Arc42 architecture documentation](README.md). Unverified assumption
 
 ## Open questions
 
-- Maturity and API of credentialsd and its portal on KDE Plasma — [spike 0005](../spikes/0005-credentialsd-provider-api.md): v0.3.1 has **no third-party provider API** (upstream issue is a stub) and no KDE portal backend. [ADR-0005](../adr/0005-provider-path.md) (revised 2026-11-07) chooses an own broker or a fork (option D) so providers are not blocked, with a return to upstream once a provider API ships: that migration is technical debt. Build and run untested.
+- Maturity and API of credentialsd and its portal on KDE Plasma — [spike 0005](../spikes/0005-credentialsd-provider-api.md): v0.3.1 has **no third-party provider API** (upstream issue is a stub) and no KDE portal backend. [ADR-0005](../adr/0005-provider-path.md) (revised 2026-11-08) does not wait for credentialsd: providers sit behind a virtual CTAP authenticator (option B) for a fail-fast end-to-end test. Browsers see a roaming key, not a platform authenticator; moving to a platform authenticator later is technical debt. Build and run untested.
 - Whether Firefox and Chromium on Linux call a portal WebAuthn API today — [spike 0006](../spikes/0006-browser-webauthn-portal.md): **No** in current source (Firefox 161.0a1, Chromium main). Only add-ons and an experimental patched Firefox reach credentialsd, so the browser-extension fallback stays on the 1.0 critical path. Source read only; upstream trackers and a live run were not available.
 - Claude Desktop token lifetime and storage backend (KWallet vs libsecret) — observed by operator, not measured.
 - Classification rule for which accounts must be device-bound — needs a data-classification rule.

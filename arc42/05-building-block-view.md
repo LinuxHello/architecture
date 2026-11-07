@@ -7,7 +7,7 @@ owner: "@atterdag"
 concepts: [c4, containers, components, arc42]
 tags: [architecture, arc42, c4]
 sources: ["README.md", "../workspace.dsl", "../adr/0008-code-documentation-mapped-to-c4.md", "https://docs.arc42.org/section-5/"]
-date: 2026-11-07
+date: 2026-11-08
 ---
 
 # 5. Building block view
@@ -26,8 +26,8 @@ C4 view: `container linuxHello "Containers"` in [workspace.dsl](../workspace.dsl
 | :-- | :-- | :-- |
 | Linux Hello Agent | Rust daemon, D-Bus (session) | Unlock state, auth state, routing policy, PIN, enrolment and reset orchestration |
 | PAM module `pam_linuxhello` | Rust `cdylib` | Runs face, fingerprint and PIN in parallel; PIN verified against the TPM root key; reports state to the Agent |
-| TPM Credential Provider | Rust daemon; attachment per ADR-0005 (own broker or fork while credentialsd has no provider API) | Creates and uses device-bound passkeys under the per-user TPM root key |
-| KeePassXC Provider Bridge | Rust daemon; attachment per ADR-0005 (own broker or fork while credentialsd has no provider API) | Serves portable passkeys from KeePassXC over its browser protocol |
+| TPM Credential Provider | Rust daemon; attachment per ADR-0005 (virtual CTAP authenticator, no credentialsd) | Creates and uses device-bound passkeys under the per-user TPM root key |
+| KeePassXC Provider Bridge | Rust daemon; attachment per ADR-0005 (virtual CTAP authenticator, no credentialsd) | Serves portable passkeys from KeePassXC over its browser protocol |
 | Plasma Integration | Rust/cxx-qt, QML, KCM | Prompts, greeter and lock-screen integration, enrolment, PIN and settings |
 | `linuxhello-ctl` | Rust CLI | Enrol, change PIN, reset trust chain (ADR-0003), inspect policy |
 | User Policy | TOML (`~/.config/linuxhello/policy.toml`) | User layer of the policy |
