@@ -24,6 +24,10 @@ date: 2026-11-07
 - [ADR-0010: Architecture documentation structured by Arc42](0010-arc42-architecture-documentation.md) (proposed)
 - [ADR-0011: An architecture repository](0011-architecture-repository.md)
 - [ADR-0012: D-Bus names](0012-dbus-names.md)
-- [ADR-0013: Browser path for 1.0](0013-browser-fallback.md) (proposed)
+- [ADR-0013: Browser path for 1.0](0013-browser-fallback.md) (proposed, superseded by ADR-0017)
+- [ADR-0014: The Agent's bus](0014-agent-bus.md) (proposed)
+- [ADR-0015: Face capture, enrolment and preview](0015-face-capture-and-enrolment.md) (proposed)
+- [ADR-0016: Where the authentication prompt is shown](0016-prompt-hosts.md) (proposed)
+- [ADR-0017: Browser path for 1.0, after ADR-0005 option B](0017-browser-path.md) (proposed)
 
 New ADRs start from [the template](../templates/adr.md).
