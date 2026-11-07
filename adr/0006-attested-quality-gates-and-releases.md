@@ -7,7 +7,7 @@ owner: "@atterdag"
 concepts: [supply-chain, governance, ci, fuzzing]
 tags: [adr, ci, security, release]
 sources: ["https://github.com/LinuxHello/linux-hello/blob/main/GOVERNANCE.md", "https://github.com/LinuxHello/linux-hello/blob/main/AGENTS.md", "https://github.com/LinuxHello/linux-hello/blob/main/.github/workflows/ci.yml", "https://github.com/LinuxHello/linux-hello/blob/main/.github/workflows/release.yml", "https://github.com/actions/attest/tree/v4.2.2", "https://slsa.dev/spec/v1.0/provenance"]
-date: 2026-11-03
+date: 2026-11-08
 ---
 
 # ADR-0006: Attested quality gates and releases
@@ -34,6 +34,15 @@ A **passed quality gate** for a commit means every CI job listed in [`scripts/ci
 
 - **`fuzz`** runs every cargo-fuzz target for 60 seconds ([`scripts/ci/fuzz.sh`](https://github.com/LinuxHello/linux-hello/blob/main/scripts/ci/fuzz.sh)) on a pinned nightly. A crash fails the job and the crashing input is kept as a workflow artifact. Each target is seeded with inputs near the limits it checks. The smoke run is a regression net, not exhaustive fuzzing, so every crash it finds also gets a named unit test.
 - **`quality-gate`** is the aggregate required check. It always runs, so a skipped gate cannot count as passed. It fails unless every gate succeeded and its `needs:` list matches `quality-gates.txt`. It then signs an attestation and verifies it.
+
+### Docs-only pull requests
+
+A pull request whose every changed path is documentation may skip the eight gate jobs. The rule is fail-closed and applies to pull requests only:
+
+- **Documentation paths** are `docs/**` and the root files `README.md`, `GOVERNANCE.md`, `SECURITY.md`, `CONTRIBUTING.md`, `AGENTS.md` and `CLAUDE.md`. Any other path, including `architecture` (the submodule pointer), `policy/`, `scripts/`, `.github/` and every crate, makes the pull request a code pull request. An empty or unreadable file list also counts as code.
+- **A push to `main` always runs every gate.** A squash merge is a new commit, so the commit that ships is gated in full. The release check relies on that attestation, so a released commit has passed all eight gates whatever its pull request skipped.
+- **`quality-gate` still decides.** It accepts `skipped` for a gate only when the change classification says docs-only; any other skip fails. `dco` always runs.
+- **The predicate says what happened.** `passed` lists the gates that succeeded and `skipped` lists those that did not run, so an attestation never claims a gate that was skipped. The subject is unchanged.
 
 ### quality-gate-v1
 
@@ -66,7 +75,7 @@ A **passed quality gate** for a commit means every CI job listed in [`scripts/ci
 - Anyone can prove, without trusting GitHub's UI, that a commit on `main` passed every gate, and which gates those were.
 - Users can verify a released file's origin (repository, workflow, tag, commit) and contents (SBOM) with one `gh attestation verify` command.
 - Parser crashes are caught before merge; the policy parser now refuses durations that overflow.
-- One aggregate required check survives the per-crate path filtering planned in GOVERNANCE.md (topology rule 3).
+- One aggregate required check survives path filtering. Documentation-only pull requests skip the Rust gates; per-crate filtering is not adopted, because the gates are workspace-wide and `linuxhello-dbus` is linked into every container.
 - `make fix` and `make gates` give agents and humans the same local entry point as CI.
 
 **Harder:**
