@@ -16,7 +16,7 @@ date: 2026-11-07
 - [ADR-0002: Licence LGPL-3.0-or-later](0002-licence-lgpl-3-or-later.md)
 - [ADR-0003: Destructive reset, no recovery key](0003-destructive-reset.md)
 - [ADR-0004: Roles of the coding agents](0004-agent-roles.md)
-- [ADR-0005: How providers attach while credentialsd has no provider API](0005-provider-path.md)
+- [ADR-0005: How providers attach: a virtual CTAP authenticator, no credentialsd](0005-provider-path.md)
 - [ADR-0006: Attested quality gates and releases](0006-attested-quality-gates-and-releases.md) (proposed)
 - [ADR-0007: Unattended agent loops](0007-unattended-agent-loops.md) (proposed)
 - [ADR-0008: Code documentation mapped to the C4 model](0008-code-documentation-mapped-to-c4.md) (proposed)

@@ -7,7 +7,7 @@ owner: "@atterdag"
 concepts: [trust-chain, threat-model, confinement, user-experience, policy, arc42]
 tags: [architecture, arc42, security, policy]
 sources: ["README.md", "https://github.com/LinuxHello/linux-hello/blob/main/docs/architecture/policy-semantics.md", "https://github.com/LinuxHello/linux-hello/blob/main/docs/security/README.md", "../adr/0003-destructive-reset.md", "https://docs.arc42.org/section-8/"]
-date: 2026-11-05
+date: 2026-11-08
 ---
 
 # 8. Crosscutting concepts
@@ -25,7 +25,7 @@ The PIN is the root, biometrics are a shortcut, and the account password is a de
 | :-- | :-- | :-- |
 | Root | PIN = TPM2 authorisation on a per-user root key; every passkey key hangs off it; TPM anti-hammering limits guessing; PIN never leaves the device | PIN unlocks the TPM-protected Windows Hello container; TPM anti-hammering |
 | Shortcut | fprintd / Howdy satisfy a TPM policy for the session; never the root; failure falls back to PIN | Windows Biometric Framework, templates local only; a match releases the container |
-| Passkeys | Stored by the TPM provider, served by credentialsd | Stored in the Hello container, served by `webauthn.dll` |
+| Passkeys | Stored by the TPM provider, served through the Virtual CTAP Authenticator | Stored in the Hello container, served by `webauthn.dll` |
 | Reset | Account or admin password authorises destroying the root key and enrolling a new PIN; it never unlocks keys | "I forgot my PIN": re-authenticate with Microsoft/Entra account; default reset deletes the container |
 | Recovery | Through relying parties: re-register passkeys with each service (account recovery, second credential) | Same; Entra's non-destructive PIN reset service is the exception |
 
@@ -39,16 +39,17 @@ Write Linux Hello in Rust, and treat logic flaws as a bigger risk than memory bu
 
 ### Language
 
-Rust, matching credentialsd and libwebauthn (shared types and async stack). A long-running daemon that holds key material and parses input from untrusted callers is where memory safety matters most. Rust does not prevent logic flaws.
+Rust, matching the TPM (`tss-esapi`), D-Bus (`zbus`) and CTAP libraries we use. A long-running daemon that holds key material and parses input from untrusted callers is where memory safety matters most. Rust does not prevent logic flaws.
 
 ### Threats to design against
 
 | Threat | Example | Mitigation |
 | :-- | :-- | :-- |
-| Caller impersonation | An app on D-Bus claims to be a browser, or asserts another site's origin | Verify the caller through the portal (sandbox app ID, peer credentials); never trust a caller-supplied origin from an unprivileged client |
+| Caller impersonation | An app on D-Bus claims to be a browser, or asserts another site's origin | D-Bus callers are verified by peer credentials (sandbox app ID where there is one). Through the virtual CTAP authenticator the client sends only the relying-party ID hash and the origin check stays in the browser; which local processes may open the HID device, and what the user-presence prompt must show, are open and are settled in spike #94. Never trust a caller-supplied origin from an unprivileged client |
 | Unlock bypass | Biometric "match" accepted without the TPM policy actually being satisfied | Unlock state is enforced by the TPM policy session, never by a flag in the daemon |
 | Key exfiltration | Private key material leaves the provider | TPM keys non-exportable; the broker only receives signatures |
-| Silent use | A passkey signs without the user's knowledge | User-presence prompt rendered by the portal, outside the calling app |
+| Silent use | A passkey signs without the user's knowledge | User-presence prompt rendered by the Prompt UI, outside the calling app |
+| Stolen old blob | A copy of the root key's blob from before a PIN change, plus the old PIN, still unlocks every key under it ([spike 0011](../spikes/0011-tpm-root-key-change-auth.md)) | The PIN change deletes the old blob; for a stronger guarantee the root key needs a policy tied to a counter the change increments (not tried) |
 | Parser exploit | Malformed CTAP/CBOR or D-Bus message | Fuzzing; no `unsafe` in parsers |
 | Supply chain | Malicious or vulnerable crate | Pinned, audited dependencies |
 
@@ -58,14 +59,14 @@ Rust, matching credentialsd and libwebauthn (shared types and async stack). A lo
 2. CI gates that block a merge: clippy (deny warnings), cargo-audit, cargo-deny (licences and advisories), fuzzing on every parser.
 3. Each security property written in plain language and backed by a test whose name states it (e.g. "a caller from another origin is refused"). The operator reviews properties and test results, not code.
 4. systemd sandboxing (dedicated user, `ProtectSystem=strict`, `NoNewPrivileges`, restricted address families, `DeviceAllow` for `/dev/tpmrm0` only) plus an AppArmor profile.
-5. Providers contributed upstream to credentialsd so its maintainers review them.
+5. Provider logic lives in its own crates behind an interface that does not know about `uhid` ([ADR-0005](../adr/0005-provider-path.md)); the privileged `uhid` helper is the only part that creates the device.
 6. External security audit of the TPM provider and broker before anyone relies on it.
 
 ### Runtime confinement and detection
 
 **AppArmor (mandatory).** One profile per daemon and for `linuxhello-ctl`, shipped in **enforce** mode.
 
-- Only the TPM Provider and the Agent may open `/dev/tpmrm0`; only the Face Client path may reach Howdy; only the Face Enrolment Module may open the camera.
+- Only the TPM Provider and the Agent may open `/dev/tpmrm0`; only the Face Client path may reach Howdy; only the Camera Stream Owner may open the camera; only the `uhid` helper may open `/dev/uhid`.
 - Policy files: admin layer read-only for every profile; user layer writable only by the Settings Module.
 - Deny `ptrace` and `/proc/<pid>/mem` access to the Agent and providers.
 - CI loads every profile (`apparmor_parser`), runs the property tests under them, and fails on any `DENIED` line or on a profile left in complain mode.
@@ -107,15 +108,16 @@ At every prompt the user can see which method is active, switch to another, and 
 
 **UX6a — Face enrolment preview.** The wizard shows the regular (RGB) camera feed as the user's view, while Howdy captures from the infrared (IR) sensor, as Windows Hello does. Rules:
 
-- Guidance overlay (face found, too close, turn slightly, captured) is driven by Howdy's IR detection, never by the RGB image, so the feedback reflects what is actually enrolled.
+- Guidance overlay (face found, too close, turn slightly, captured) is driven by IR detection, never by the RGB image, so the feedback reflects what is actually enrolled. Howdy exposes no detection results ([spike 0008](../spikes/0008-howdy-interface.md)), so a Linux Hello capture-and-detect component has to provide them; the choice is an open ADR.
 - The RGB feed is display only: never stored, never passed to Howdy.
+- One component (the Camera Stream Owner) owns both streams. On the Logitech BRIO, starting RGB and IR together failed in every run and a one-second gap worked only in some orders and modes ([spike 0012](../spikes/0012-camera-rgb-ir-concurrent.md)), so it opens them in a fixed order with a retry.
 - No RGB camera present → show the IR feed in greyscale.
-- Some cameras may not stream RGB and IR at once — **to test on real hardware**; fall back to IR preview if so.
+- If both streams cannot be held, fall back to no live RGB preview or to an IR preview. One camera model has been tested; a second is needed.
 
 **UX7a — One place for sign-in methods.** Face recognition sits beside fingerprint in KDE's Users settings page, where fingerprint enrolment already lives; KDE's fingerprint flow stays unchanged.
 
 - Add a "Configure Face Recognition" entry next to the existing "Configure Fingerprint Authentication" entry, opening the Face Enrolment Module.
-- Delivered as an upstream contribution to KDE's Users settings module (plasma-desktop), not a fork (C4). Whether that module offers an extension point is **unverified**; assumed not.
+- `kcm_users` has no extension point for authentication methods ([spike 0010](../spikes/0010-kcm-users-extension-point.md)). Until KDE accepts a change (not planned), the entries live on Linux Hello's own settings page, placed next to Users in System Settings; KDE's fingerprint flow stays on the Users page.
 - Interim until accepted upstream: a separate Linux Hello page in System Settings, linked from the same area.
 
 **UX7b — PIN management.** A "Change PIN" entry sits in the same area, beside fingerprint and face.
@@ -127,7 +129,7 @@ At every prompt the user can see which method is active, switch to another, and 
 
 ### Design consequence
 
-A PAM conversation is text only, so a greeter cannot tell which method is running. Linux Hello therefore adds a side channel: `pam_linuxhello` runs fprintd and Howdy concurrently itself (instead of stacking `pam_fprintd` and `pam_howdy`) and publishes the live state on the Agent's D-Bus API (`MethodsAvailable`, `ActiveMethod`, `State`, `Result`). The login manager, lock screen and Prompt UI all render from that one state through a shared QML component.
+A PAM conversation is text only, so a greeter cannot tell which method is running. Linux Hello therefore adds a side channel: `pam_linuxhello` runs fprintd and Howdy concurrently itself (instead of stacking `pam_fprintd` and `pam_howdy`) and publishes the live state on the Agent's D-Bus API (`MethodsAvailable`, `ActiveMethod`, `State`, `Result`). The login manager, lock screen and Prompt UI all render from that one state through a shared QML component. Neither the login manager nor the lock screen has a slot for a third-party prompt ([spike 0009](../spikes/0009-plasma-prompt-component.md)): Linux Hello ships a theme for SDDM and a shell package for the lock screen that import the shared module, or proposes upstream changes; an ADR chooses the routes. The state has to come over the system bus, with a prompt identifier and addressed delivery so one user's state is not broadcast to every local user ([spike 0007](../spikes/0007-pam-dbus-method-state.md)).
 
 ### Additions to the C4 model
 
@@ -136,12 +138,14 @@ A PAM conversation is text only, so a greeter cannot tell which method is runnin
 | `pam_linuxhello` | Method Orchestrator | Runs face, fingerprint and PIN in parallel; first success wins; cancels the rest |
 | Linux Hello Agent | Auth State Publisher | D-Bus signals for method, state and result per prompt |
 | Plasma Integration | Auth Prompt QML Component | Shared method indicator and switcher for the greeter, lock screen and Prompt UI |
-| Plasma Integration | Face Enrolment Module | Camera preview (PipeWire camera portal), guided capture and test; drives Howdy |
-| Plasma Integration | Greeter and Lock Screen Integration | Embeds the shared component in the Plasma login manager and kscreenlocker |
+| Plasma Integration | Camera Stream Owner | Opens the RGB and IR streams in a fixed order with a retry |
+| Plasma Integration | Face Enrolment Module | Preview, guided capture and test; calls Howdy as a subprocess |
+| Plasma Integration | SDDM Theme | Embeds the shared component in SDDM |
+| Plasma Integration | Lock Screen Shell Package | Embeds the shared component in the lock screen |
 
-New external dependencies: Howdy's enrolment and test interfaces (currently CLI only, so the module needs a stable interface; contribute one upstream if none exists), the camera via PipeWire, KDE's fingerprint enrolment UI. All of these are in [workspace.dsl](../workspace.dsl).
+New external dependencies: Howdy's match, enrolment and test commands (subprocess and root CLI only), the camera as V4L2 nodes, KDE's fingerprint enrolment UI. All of these are in [workspace.dsl](../workspace.dsl).
 
-Open questions: whether Howdy exposes a library or D-Bus interface usable for live preview — **unverified**; how the Plasma login manager and kscreenlocker allow a third-party prompt component — **unverified**.
+Answered by spikes: Howdy has no library or D-Bus interface and no preview ([0008](../spikes/0008-howdy-interface.md)); the login manager and lock screen have no prompt slot ([0009](../spikes/0009-plasma-prompt-component.md)). Open, each needing an ADR: the capture-and-detect component, and the lock-screen and SDDM routes.
 
 ## Policy
 

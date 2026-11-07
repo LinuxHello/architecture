@@ -2,12 +2,12 @@
 type: spike
 subject: credentialsd with the patched portal and its GTK backend on Plasma
 artifact: spike
-status: open
+status: superseded
 owner: "@atterdag"
 concepts: [credentialsd, xdg-desktop-portal, plasma, webauthn]
 tags: [spike, m0, upstream]
 sources: []
-date: 2026-11-06
+date: 2026-11-08
 issue: https://github.com/LinuxHello/linux-hello/issues/31
 ---
 
@@ -37,4 +37,4 @@ None yet. The spike is open.
 
 ## Answer
 
-Open. Fill in Yes / No / Partly here, and link the ADR or issue the answer changes.
+Not planned. [ADR-0005](../adr/0005-provider-path.md) (revised 2026-11-08) does not use credentialsd, so this spike was not run. If the first end-to-end test (linux-hello#94) shows that a platform-authenticator path is needed, a new spike measures it; credentialsd with the patched portal on Plasma stays a possible reference.

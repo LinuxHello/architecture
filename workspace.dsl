@@ -2,7 +2,7 @@
  * Linux Hello — C4 workspace (System Context, Container, Component)
  * Source notes: docs/architecture/ (Arc42 sections, README.md)
  * Status: draft, UNTESTED — validate with the Structurizr CLI before use.
- * Date: 2026-10-27
+ * Date: 2026-11-08 (ADR-0005 option B; spikes 0008-0012 and 0014)
  */
 workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the Linux desktop" {
 
@@ -32,27 +32,31 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
                 agentNotifier = component "Agent Notifier" "Reports method state and session unlock to the Agent" "zbus"
             }
 
-            tpmProvider = container "TPM Credential Provider" "Device-bound passkeys under the per-user TPM root key" "Rust daemon, credentialsd Provider API" {
-                tpmProviderApi = component "Provider API Adapter" "Implements the credentialsd provider interface" "zbus"
+            tpmProvider = container "TPM Credential Provider" "Device-bound passkeys under the per-user TPM root key" "Rust daemon" {
+                tpmProviderApi = component "Provider Interface" "Credential operations the Virtual CTAP Authenticator calls; knows nothing about uhid, so another front end can replace it (ADR-0005)" "zbus"
                 credStore = component "Credential Index" "Maps relying party and credential ID to TPM key handles; no private material" "Rust"
-                tpmKeys = component "TPM Key Service" "Root key, auth change, child keys, policy sessions, signing" "Rust"
+                tpmKeys = component "TPM Key Service" "Root key as a non-primary child of a storage primary, PIN change in place (new blob, old blob deleted), child keys, policy sessions, signing (spike 0011)" "Rust"
                 tpmFfi = component "TPM FFI" "The only crate allowed unsafe code" "tss-esapi"
             }
 
-            kpxcBridge = container "KeePassXC Provider Bridge" "Portable passkeys from KeePassXC" "Rust daemon, credentialsd Provider API" {
-                kpxcProviderApi = component "Provider API Adapter" "Implements the credentialsd provider interface" "zbus"
+            kpxcBridge = container "KeePassXC Provider Bridge" "Portable passkeys from KeePassXC" "Rust daemon" {
+                kpxcProviderApi = component "Provider Interface" "Credential operations the Virtual CTAP Authenticator calls (ADR-0005)" "zbus"
                 kpxcClient = component "KeePassXC Protocol Client" "Encrypted browser-protocol channel to KeePassXC" "Rust, NaCl box"
             }
 
+            ctapHelper = container "Virtual CTAP Authenticator" "Presents Linux Hello as a FIDO security key to browsers and apps; routes each request to a provider by policy (ADR-0005 option B)" "Rust daemon, uhid (privileged helper)"
+
             plasma = container "Plasma Integration" "Prompts, greeter and lock-screen integration, enrolment and settings" "Rust/cxx-qt, QML, KCM" {
-                authPrompt = component "Auth Prompt QML Component" "Shared method indicator and switcher; renders Agent auth state (UX1-UX5)" "QML"
-                promptUi = component "Prompt UI" "In-session user-presence and provider-choice dialogs, outside the calling app" "QML, portal backend"
-                greeterTheme = component "Greeter and Lock Screen Integration" "Embeds the shared prompt in the login manager and lock screen" "QML"
-                kcm = component "Linux Hello Settings Module" "Interim settings page: methods, policy (UX7a)" "KCM, QML"
-                faceEnrol = component "Face Enrolment Module" "RGB preview, IR-driven guidance overlay, capture, test, delete (UX6, UX6a)" "QML, Rust"
+                authPrompt = component "Auth Prompt QML Component" "Shared method indicator and switcher; renders Agent auth state (UX1-UX5). One QML module in the system QML directory, imported by every host below (spike 0009)" "QML"
+                promptUi = component "Prompt UI" "In-session user-presence and provider-choice dialogs, outside the calling app" "QML"
+                sddmTheme = component "SDDM Theme" "Theme package that embeds the shared prompt in SDDM; a Breeze fork or an upstream patch, chosen by ADR (spike 0009). The Plasma Login Manager needs an upstream patch" "QML"
+                lockScreenPackage = component "Lock Screen Shell Package" "Embeds the shared prompt in the lock screen: stock Face and Fingerprint service names (text only, 6.8 and later), a fork limited to lockscreen/, or an upstream slot; chosen by ADR (spike 0009)" "QML, Plasma shell package"
+                kcm = component "Linux Hello Settings Module" "Own settings page next to Users in System Settings (kcm_users has no extension point, spike 0010): methods, policy (UX7a)" "KCM, QML"
+                cameraStreams = component "Camera Stream Owner" "Opens the RGB and IR streams in a fixed order with a retry; falls back to no live RGB preview, because starting both together failed on the BRIO (spike 0012)" "Rust, V4L2"
+                faceEnrol = component "Face Enrolment Module" "RGB preview, guidance overlay, capture, test, delete (UX6, UX6a). Howdy gives no preview or detection results (spike 0008), so a Linux Hello capture-and-detect component is needed; ADR pending" "QML, Rust"
                 pinSettings = component "PIN Settings" "Change PIN, rules, lockout status, forgot-PIN link (UX7b)" "QML"
                 wizard = component "Enrolment Wizard" "First run: PIN, then optional face and fingerprint (UX8)" "QML"
-                usersKcmPatch = component "Users Page Entries" "Face and PIN entries beside fingerprint; upstream contribution to plasma-desktop" "QML patch"
+                usersKcmPatch = component "Users Page Entries" "Optional, not planned: Face and PIN entries beside fingerprint need an upstream change to kcm_users in plasma-workspace (spike 0010)" "QML patch"
             }
 
             cli = container "linuxhello-ctl" "Enrol, change PIN, reset, inspect" "Rust CLI" {
@@ -70,18 +74,17 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
             }
         }
 
-        credentialsd = softwareSystem "credentialsd" "Linux Credentials portal and broker (LGPL-3.0)" "External"
-        portal = softwareSystem "xdg-desktop-portal" "Desktop portal framework" "External"
+        uhid = softwareSystem "Linux uhid and hidraw" "Kernel virtual HID device: /dev/uhid creates the FIDO device, browsers and apps reach it through hidraw" "External"
         keepassxc = softwareSystem "KeePassXC" "Password manager holding portable passkeys (GPL)" "External"
         fprintd = softwareSystem "fprintd" "Fingerprint daemon (GPL)" "External"
-        howdy = softwareSystem "Howdy" "IR face recognition; match, enrol, test (MIT)" "External"
+        howdy = softwareSystem "Howdy" "IR face recognition (MIT). Match as a subprocess (exit status); enrol and test as a root CLI; no library, D-Bus API, preview or detection results (spike 0008)" "External"
         linuxPam = softwareSystem "Linux-PAM" "Pluggable authentication framework" "External"
         tpm = softwareSystem "TPM 2.0" "Kernel resource manager /dev/tpmrm0" "External"
-        camera = softwareSystem "Camera via PipeWire" "RGB feed for preview only" "External"
+        camera = softwareSystem "Camera" "UVC camera with RGB and IR as separate V4L2 nodes; the BRIO streams both together only in some start orders (spike 0012); PipeWire coexistence untested" "External"
         secretService = softwareSystem "Secret Service (KWallet)" "Token and secret storage" "External"
-        loginManager = softwareSystem "Plasma login manager" "Graphical login" "External"
-        lockScreen = softwareSystem "kscreenlocker" "Plasma lock screen" "External"
-        systemSettings = softwareSystem "KDE System Settings" "Hosts KCMs; Users page with fingerprint enrolment" "External"
+        loginManager = softwareSystem "Plasma login manager" "Graphical login: SDDM, or the Plasma Login Manager from Plasma 6.8" "External"
+        lockScreen = softwareSystem "kscreenlocker" "Plasma lock screen; a part of the Plasma shell package from 6.8" "External"
+        systemSettings = softwareSystem "KDE System Settings" "Hosts KCMs; Users page with a fixed fingerprint entry" "External"
         browsers = softwareSystem "Browsers" "Firefox, Chromium" "External"
         nativeApps = softwareSystem "Native and Electron apps" "e.g. Claude Desktop" "External"
         relyingParties = softwareSystem "Relying parties" "Websites and identity providers" "External"
@@ -102,20 +105,21 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
         admin -> cliCommands "Authorises reset"
 
         # External to external (context only)
-        browsers -> credentialsd "WebAuthn requests" "D-Bus portal"
-        nativeApps -> credentialsd "WebAuthn requests" "D-Bus portal"
+        browsers -> uhid "WebAuthn requests as CTAP2 to a USB security key" "hidraw"
+        nativeApps -> uhid "WebAuthn requests as CTAP2 to a USB security key" "hidraw"
         nativeApps -> secretService "Stores tokens" "Secret Service API"
         browsers -> relyingParties "WebAuthn ceremonies" "HTTPS"
-        credentialsd -> portal "Exposed through"
+        uhid -> ctapHelper "Delivers CTAP2 reports" "/dev/uhid"
         loginManager -> linuxPam "Authenticates via"
         lockScreen -> linuxPam "Authenticates via"
 
         # KDE integration
-        loginManager -> greeterTheme "Loads prompt" "QML"
-        lockScreen -> greeterTheme "Loads prompt" "QML"
-        greeterTheme -> authPrompt "Embeds"
+        loginManager -> sddmTheme "Loads theme" "QML"
+        lockScreen -> lockScreenPackage "Loads shell package" "QML"
+        sddmTheme -> authPrompt "Embeds"
+        lockScreenPackage -> authPrompt "Embeds"
         promptUi -> authPrompt "Embeds"
-        authPrompt -> dbusApi "Subscribes to auth state, selects method" "D-Bus"
+        authPrompt -> dbusApi "Subscribes to auth state, selects method; the system bus is the only bus every surface reaches, bus ADR pending (spikes 0007, 0009)" "D-Bus"
         systemSettings -> kcm "Hosts" "KCM"
         systemSettings -> usersKcmPatch "Shows entries on Users page"
         usersKcmPatch -> faceEnrol "Opens"
@@ -126,10 +130,11 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
         kcm -> policyStore "Writes user policy" "TOML"
         wizard -> dbusApi "Starts enrolment" "D-Bus"
         wizard -> systemSettings "Hands off fingerprint enrolment to Users page"
-        faceEnrol -> camera "Reads RGB preview (display only)" "PipeWire camera portal"
-        faceEnrol -> howdy "Enrol, test, delete; IR detection events"
+        faceEnrol -> cameraStreams "Preview and capture frames"
+        cameraStreams -> camera "Reads RGB (display only) and IR" "V4L2"
+        faceEnrol -> howdy "Enrol, test, delete through the howdy CLI; no preview or detection results" "subprocess"
         pinSettings -> dbusApi "Change PIN, lockout status" "D-Bus"
-        credentialsd -> promptUi "User-presence and choice prompts" "Portal backend"
+        ctapHelper -> promptUi "User-presence and choice prompts" "D-Bus"
         promptUi -> dbusApi "Reads routing decision, authenticates" "D-Bus"
 
         # PAM module
@@ -140,7 +145,7 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
         methodOrch -> fingerClient "Fingerprint path"
         methodOrch -> agentNotifier "Method state and result"
         pinVerifier -> tpm "TPM2 policy auth" "TCTI device"
-        faceClient -> howdy "Match request"
+        faceClient -> howdy "Match request; result is the exit status" "subprocess"
         fingerClient -> fprintd "Verify" "D-Bus"
         agentNotifier -> dbusApi "Auth state, session unlocked" "D-Bus"
 
@@ -161,13 +166,14 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
         resetCoord -> auditLog "Events"
 
         # Providers
-        credentialsd -> tpmProviderApi "Provider calls" "D-Bus"
+        ctapHelper -> tpmProviderApi "Credential operations" "D-Bus"
+        ctapHelper -> dbusApi "Checks unlock and routing policy" "D-Bus"
         tpmProviderApi -> dbusApi "Checks unlock and policy" "D-Bus"
         tpmProviderApi -> credStore "Looks up credentials"
         tpmProviderApi -> tpmKeys "Sign assertion"
         tpmKeys -> tpmFfi "ESAPI calls"
         tpmFfi -> tpm "Commands" "/dev/tpmrm0"
-        credentialsd -> kpxcProviderApi "Provider calls" "D-Bus"
+        ctapHelper -> kpxcProviderApi "Credential operations" "D-Bus"
         kpxcProviderApi -> dbusApi "Checks unlock and policy" "D-Bus"
         kpxcProviderApi -> kpxcClient "Get or create passkey"
         kpxcClient -> keepassxc "Browser protocol" "Unix socket"
@@ -184,6 +190,7 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
         apparmor -> agent "Confines"
         apparmor -> tpmProvider "Confines"
         apparmor -> kpxcBridge "Confines"
+        apparmor -> ctapHelper "Confines"
         apparmor -> cli "Confines"
         tetraPolicies -> tetragon "Loaded into"
         tetragon -> logStack "Security events"

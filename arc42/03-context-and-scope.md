@@ -7,7 +7,7 @@ owner: "@atterdag"
 concepts: [c4, system-context, arc42]
 tags: [architecture, arc42, c4]
 sources: ["README.md", "../workspace.dsl", "../adr/0008-code-documentation-mapped-to-c4.md", "https://docs.arc42.org/section-3/"]
-date: 2026-11-05
+date: 2026-11-08
 ---
 
 # 3. Context and scope
@@ -20,7 +20,7 @@ C4 view: `systemContext linuxHello "Context"` in [workspace.dsl](../workspace.ds
 
 ![C4 system context view of Linux Hello: the desktop user and administrator, Linux Hello, and the external systems it reuses](../diagrams/Context.svg)
 
-Linux Hello is the only software system modelled inside; everything it reuses is an external software system, shown only by how Linux Hello consumes it. The people are the desktop user and the administrator; the external systems are credentialsd, xdg-desktop-portal, KeePassXC, fprintd, Howdy, Linux-PAM, TPM 2.0, the camera via PipeWire, the Secret Service, the Plasma login manager, kscreenlocker, KDE System Settings, browsers, native and Electron apps, relying parties, AppArmor, Tetragon, systemd-journald, a log stack and future device management.
+Linux Hello is the only software system modelled inside; everything it reuses is an external software system, shown only by how Linux Hello consumes it. The people are the desktop user and the administrator; the external systems are the Linux uhid and hidraw interface, KeePassXC, fprintd, Howdy, Linux-PAM, TPM 2.0, the camera via PipeWire, the Secret Service, the Plasma login manager, kscreenlocker, KDE System Settings, browsers, native and Electron apps, relying parties, AppArmor, Tetragon, systemd-journald, a log stack and future device management.
 
 ## 3.2 Technical context
 

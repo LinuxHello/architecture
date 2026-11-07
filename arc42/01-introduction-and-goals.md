@@ -7,7 +7,7 @@ owner: "@atterdag"
 concepts: [credential-broker, passkeys, arc42]
 tags: [architecture, arc42]
 sources: ["README.md", "https://docs.arc42.org/section-1/"]
-date: 2026-11-05
+date: 2026-11-08
 ---
 
 # 1. Introduction and goals
@@ -18,7 +18,7 @@ Part of the [Arc42 architecture documentation](README.md).
 
 ### Recommendation
 
-Build one **session credential broker** for the whole desktop, not a browser feature. It is unlocked once by biometrics through PAM, serves passkeys (WebAuthn/CTAP2) and secrets (Secret Service API) to browsers, native apps and Electron apps over an xdg-desktop-portal, and routes each relying party to a key provider by policy: TPM2 (device-bound) or KeePassXC (portable). Build it as an integration layer on credentialsd, not a reimplementation.
+Build one **session credential broker** for the whole desktop, not a browser feature. It is unlocked once by biometrics through PAM, serves passkeys (WebAuthn/CTAP2) and secrets (Secret Service API) to browsers, native apps and Electron apps, and routes each relying party to a key provider by policy: TPM2 (device-bound) or KeePassXC (portable). Passkeys reach clients through a virtual CTAP authenticator that looks like a USB security key ([ADR-0005](../adr/0005-provider-path.md)), not through credentialsd; the first aim is an end-to-end test that shows whether Linux Hello works.
 
 ### Situation
 

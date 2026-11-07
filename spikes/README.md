@@ -18,13 +18,13 @@ date: 2026-11-07
 | [0006: Browser WebAuthn through the portal (Firefox, Chromium)](0006-browser-webauthn-portal.md) | Partly: no stock browser calls the portal; only add-ons and an experimental Firefox build | [#6](https://github.com/LinuxHello/linux-hello/issues/6) |
 | [0007: PAM module publishes method state over the Agent's D-Bus API](0007-pam-dbus-method-state.md) | Partly: only the system bus is reachable in every PAM context; the Agent must serve the PAM module there (needs an ADR) | [#7](https://github.com/LinuxHello/linux-hello/issues/7) |
 | [0013: Licences of libwebauthn, KeePassXC, fprintd and Howdy](0013-upstream-licences.md) | Yes: all fit C2 and C3 | [#13](https://github.com/LinuxHello/linux-hello/issues/13) |
-| [0008: Howdy interface for live preview, enrolment and test](0008-howdy-interface.md) | Open | [#8](https://github.com/LinuxHello/linux-hello/issues/8) |
-| [0009: Third-party prompt in the Plasma login manager and kscreenlocker](0009-plasma-prompt-component.md) | Open | [#9](https://github.com/LinuxHello/linux-hello/issues/9) |
-| [0010: Extension point in KDE's Users settings module](0010-kcm-users-extension-point.md) | Open | [#10](https://github.com/LinuxHello/linux-hello/issues/10) |
-| [0011: Change the TPM root key's authorisation in place with tss-esapi](0011-tpm-root-key-change-auth.md) | Open | [#11](https://github.com/LinuxHello/linux-hello/issues/11) |
-| [0012: Camera streams RGB and IR at the same time](0012-camera-rgb-ir-concurrent.md) | Open | [#12](https://github.com/LinuxHello/linux-hello/issues/12) |
-| [0014: Trademark risk of the name Linux Hello](0014-name-trademark-risk.md) | Open | [#14](https://github.com/LinuxHello/linux-hello/issues/14) |
-| [0031: credentialsd with the patched portal and its GTK backend on Plasma](0031-credentialsd-portal-on-plasma.md) | Open | [#31](https://github.com/LinuxHello/linux-hello/issues/31) |
+| [0008: Howdy interface for live preview, enrolment and test](0008-howdy-interface.md) | Partly: match as a subprocess, enrolment as a root CLI, no preview or detection results | [#8](https://github.com/LinuxHello/linux-hello/issues/8) |
+| [0009: Third-party prompt in the Plasma login manager and kscreenlocker](0009-plasma-prompt-component.md) | Partly: no slot in either; one shared QML module can serve all hosts (needs ADRs) | [#9](https://github.com/LinuxHello/linux-hello/issues/9) |
+| [0010: Extension point in KDE's Users settings module](0010-kcm-users-extension-point.md) | No: own settings page next to Users | [#10](https://github.com/LinuxHello/linux-hello/issues/10) |
+| [0011: Change the TPM root key's authorisation in place with tss-esapi](0011-tpm-root-key-change-auth.md) | Yes on swtpm, if the root key is a non-primary child; hardware TPM untested | [#11](https://github.com/LinuxHello/linux-hello/issues/11) |
+| [0012: Camera streams RGB and IR at the same time](0012-camera-rgb-ir-concurrent.md) | Partly: unreliable together on the BRIO; one camera tested | [#12](https://github.com/LinuxHello/linux-hello/issues/12) |
+| [0014: Trademark risk of the name Linux Hello](0014-name-trademark-risk.md) | Partly: moderate risk next to WINDOWS HELLO; not legal advice | [#14](https://github.com/LinuxHello/linux-hello/issues/14) |
+| [0031: credentialsd with the patched portal and its GTK backend on Plasma](0031-credentialsd-portal-on-plasma.md) | Not planned: ADR-0005 does not use credentialsd | [#31](https://github.com/LinuxHello/linux-hello/issues/31) |
 | [0033: Own browser extension in front of the broker: trusted origin, and native messaging from confined browsers](0033-own-extension-origin-and-confined-native-messaging.md) | Open (source read: Partly; origin solvable by design, confined Firefox needs the native-messaging proxy, untested on Plasma) | [#33](https://github.com/LinuxHello/linux-hello/issues/33) |
 
 New spikes start from [the template](../templates/spike.md). See [index](../README.md).
@@ -43,13 +43,13 @@ flowchart LR
     S6["0006 browser WebAuthn portal"]:::done
     S7["0007 PAM and Agent D-Bus"]:::done
     S13["0013 upstream licences"]:::done
-    S8["0008 Howdy interface"]:::open
-    S9["0009 Plasma prompt component"]:::open
-    S10["0010 Users settings extension"]:::open
-    S11["0011 TPM root key change auth"]:::open
-    S12["0012 RGB and IR camera"]:::open
-    S14["0014 name trademark risk"]:::open
-    S31["0031 portal on Plasma"]:::open
+    S8["0008 Howdy interface"]:::done
+    S9["0009 Plasma prompt component"]:::done
+    S10["0010 Users settings extension"]:::done
+    S11["0011 TPM root key change auth"]:::done
+    S12["0012 RGB and IR camera"]:::done
+    S14["0014 name trademark risk"]:::done
+    S31["0031 portal on Plasma (not planned)"]:::open
     S33["0033 own extension and native messaging"]:::open
 
     T1["Provider path (ADR-0005)"]:::target
@@ -67,6 +67,9 @@ flowchart LR
     T13["End-to-end tests per provider"]:::target
 
     S5 --> T1
+    S94["#94 virtual CTAP end to end"]:::open
+    S94 --> T2
+    S94 --> T1
     S5 --> S31
     S6 --> T2
     S33 --> T2
