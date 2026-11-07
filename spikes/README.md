@@ -25,6 +25,7 @@ date: 2026-11-07
 | [0012: Camera streams RGB and IR at the same time](0012-camera-rgb-ir-concurrent.md) | Partly: unreliable together on the BRIO; one camera tested | [#12](https://github.com/LinuxHello/linux-hello/issues/12) |
 | [0014: Trademark risk of the name Linux Hello](0014-name-trademark-risk.md) | Partly: moderate risk next to WINDOWS HELLO; not legal advice | [#14](https://github.com/LinuxHello/linux-hello/issues/14) |
 | [0031: credentialsd with the patched portal and its GTK backend on Plasma](0031-credentialsd-portal-on-plasma.md) | Not planned: ADR-0005 does not use credentialsd | [#31](https://github.com/LinuxHello/linux-hello/issues/31) |
+| [0094: End-to-end passkey through a virtual CTAP authenticator and the TPM](0094-virtual-ctap-end-to-end.md) | Yes for non-resident credentials without user verification: stock libfido2, Chromium 156 and Firefox 157 work; roaming-key presentation; discoverable credentials, UV and presence prompts still to build | [#94](https://github.com/LinuxHello/linux-hello/issues/94) |
 | [0033: Own browser extension in front of the broker: trusted origin, and native messaging from confined browsers](0033-own-extension-origin-and-confined-native-messaging.md) | Open (source read: Partly; origin solvable by design, confined Firefox needs the native-messaging proxy, untested on Plasma) | [#33](https://github.com/LinuxHello/linux-hello/issues/33) |
 
 New spikes start from [the template](../templates/spike.md). See [index](../README.md).
@@ -67,7 +68,7 @@ flowchart LR
     T13["End-to-end tests per provider"]:::target
 
     S5 --> T1
-    S94["#94 virtual CTAP end to end"]:::open
+    S94["0094 virtual CTAP end to end"]:::done
     S94 --> T2
     S94 --> T1
     S5 --> S31
