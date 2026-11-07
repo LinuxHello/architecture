@@ -7,7 +7,7 @@ owner: "@atterdag"
 concepts: [credential-broker, passkeys, credentialsd, arc42]
 tags: [architecture, arc42]
 sources: ["README.md", "../adr/", "https://docs.arc42.org/section-4/"]
-date: 2026-11-07
+date: 2026-11-08
 ---
 
 # 4. Solution strategy
@@ -68,14 +68,14 @@ flowchart TB
 
 ## Prior art (checked 2026-10-27)
 
-Build on credentialsd rather than writing a new broker. It already covers layers 2–4; the gaps are the TPM provider, a KeePassXC provider, the biometric gate and a KDE portal backend.
+**Superseded for the provider path by [ADR-0005](../adr/0005-provider-path.md) (2026-11-08): Linux Hello does not depend on credentialsd for the first end-to-end test; this section and the table below describe the earlier plan and need a rewrite once that test has run.** Build on credentialsd rather than writing a new broker. It already covers layers 2–4; the gaps are the TPM provider, a KeePassXC provider, the biometric gate and a KDE portal backend.
 
 | Project | What it does | State | Fit |
 | :-- | :-- | :-- | :-- |
-| [Credentials for Linux](https://github.com/linux-credentials) — libwebauthn + [credentialsd](https://github.com/linux-credentials/credentialsd) | FIDO2 platform library; D-Bus credentials portal for apps (third-party provider API planned, not in v0.3.1, see spike 0005); reference GTK UI; Firefox add-on and patched Flatpak | v0.3.1 pre-release (7 Sep 2026); needs a patched xdg-desktop-portal; TPM provider planned, not built; packaged for Fedora/openSUSE | Layers 2–4. Adopt; the provider path uses an own broker or a fork until upstream has a provider API (ADR-0005) |
+| [Credentials for Linux](https://github.com/linux-credentials) — libwebauthn + [credentialsd](https://github.com/linux-credentials/credentialsd) | FIDO2 platform library; D-Bus credentials portal for apps (third-party provider API planned, not in v0.3.1, see spike 0005); reference GTK UI; Firefox add-on and patched Flatpak | v0.3.1 pre-release (7 Sep 2026); needs a patched xdg-desktop-portal; TPM provider planned, not built; packaged for Fedora/openSUSE | Layers 2–4. Not used on the provider path (ADR-0005) |
 | [kpasskey](https://github.com/Tojori/kpasskey) | Passkeys stored in KWallet, exposed as a virtual CTAP 2.1 security key to unmodified Firefox and Chromium | Prototype | KDE-native interim path; software keys, browsers only |
 | tpm-fido | Virtual USB FIDO device backed by the TPM | Not re-checked in this pass | TPM custody without a portal |
-| KeePassXC (≥ 2.7.7) | Passkeys in KDBX via browser extension | Released | Portable provider, through the own broker or fork (ADR-0005 option D), and through credentialsd once it has a provider API |
+| KeePassXC (≥ 2.7.7) | Passkeys in KDBX via browser extension | Released | Portable provider behind the virtual CTAP authenticator (ADR-0005 option B) |
 
 Sources: [FOSDEM 2026 talk](https://archive.fosdem.org/2026/schedule/event/838A8N-credentials-for-linux-bringing-passkeys-to-linux/), [slides](https://archive.fosdem.org/2026/events/attachments/838A8N-credentials-for-linux-bringing-passkeys-to-linux/slides/267430/fosdem_ravbuub.pdf), [freedom-browser issue #733](https://github.com/solardev-xyz/freedom-browser/issues/733). Taken from search snippets; repositories not yet opened.
 
