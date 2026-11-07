@@ -66,7 +66,7 @@ Rust, matching the TPM (`tss-esapi`), D-Bus (`zbus`) and CTAP libraries we use. 
 
 **AppArmor (mandatory).** One profile per daemon and for `linuxhello-ctl`, shipped in **enforce** mode.
 
-- Only the TPM Provider and the Agent may open `/dev/tpmrm0`; only the Face Client path may reach Howdy; only the Camera Stream Owner may open the camera; only the `uhid` helper may open `/dev/uhid`.
+- Only the TPM Provider and the Agent may open `/dev/tpmrm0`; only the Face Client path may reach Howdy; only Howdy, started by the Agent's helper, may open the camera; only the `uhid` helper may open `/dev/uhid`.
 - Policy files: admin layer read-only for every profile; user layer writable only by the Settings Module.
 - Deny `ptrace` and `/proc/<pid>/mem` access to the Agent and providers.
 - CI loads every profile (`apparmor_parser`), runs the property tests under them, and fails on any `DENIED` line or on a profile left in complain mode.
@@ -106,11 +106,11 @@ At every prompt the user can see which method is active, switch to another, and 
 | UX7 | Fingerprint enrolment reuses KDE's existing fingerprint UI in the Users settings page, linked from the same Linux Hello page | System Settings |
 | UX8 | First-run wizard: PIN first (the root), then optional face and fingerprint | Enrolment Wizard |
 
-**UX6a — Face enrolment preview.** The wizard shows the regular (RGB) camera feed as the user's view, while Howdy captures from the infrared (IR) sensor, as Windows Hello does. Rules:
+**UX6a — Face enrolment preview. Deferred: not part of 1.0 ([ADR-0015](../adr/0015-face-capture-and-enrolment.md)).** The design below is the target. Howdy exposes no preview or detection results ([spike 0008](../spikes/0008-howdy-interface.md)), so 1.0 shows guided text and a recognition test instead. The wizard is meant to show the regular (RGB) camera feed as the user's view, while Howdy captures from the infrared (IR) sensor, as Windows Hello does. Rules for when it is built:
 
-- Guidance overlay (face found, too close, turn slightly, captured) is driven by IR detection, never by the RGB image, so the feedback reflects what is actually enrolled. Howdy exposes no detection results ([spike 0008](../spikes/0008-howdy-interface.md)), so a Linux Hello capture-and-detect component has to provide them; the choice is an open ADR.
+- Guidance overlay (face found, too close, turn slightly, captured) is driven by IR detection, never by the RGB image, so the feedback reflects what is actually enrolled. It needs detection results that Howdy does not give; the routes are an upstream interface or a component of ours, each a new ADR.
 - The RGB feed is display only: never stored, never passed to Howdy.
-- One component (the Camera Stream Owner) owns both streams. On the Logitech BRIO, starting RGB and IR together failed in every run and a one-second gap worked only in some orders and modes ([spike 0012](../spikes/0012-camera-rgb-ir-concurrent.md)), so it opens them in a fixed order with a retry.
+- The camera has one owner at a time: while Howdy captures, only Howdy holds the IR stream, which avoids the RGB and IR start-order failure on the Logitech BRIO ([spike 0012](../spikes/0012-camera-rgb-ir-concurrent.md)).
 - No RGB camera present → show the IR feed in greyscale.
 - If both streams cannot be held, fall back to no live RGB preview or to an IR preview. One camera model has been tested; a second is needed.
 
@@ -129,7 +129,7 @@ At every prompt the user can see which method is active, switch to another, and 
 
 ### Design consequence
 
-A PAM conversation is text only, so a greeter cannot tell which method is running. Linux Hello therefore adds a side channel: `pam_linuxhello` runs fprintd and Howdy concurrently itself (instead of stacking `pam_fprintd` and `pam_howdy`) and publishes the live state on the Agent's D-Bus API (`MethodsAvailable`, `ActiveMethod`, `State`, `Result`). The login manager, lock screen and Prompt UI all render from that one state through a shared QML component. Neither the login manager nor the lock screen has a slot for a third-party prompt ([spike 0009](../spikes/0009-plasma-prompt-component.md)): Linux Hello ships a theme for SDDM and a shell package for the lock screen that import the shared module, or proposes upstream changes; an ADR chooses the routes. The state has to come over the system bus, with a prompt identifier and addressed delivery so one user's state is not broadcast to every local user ([spike 0007](../spikes/0007-pam-dbus-method-state.md)).
+A PAM conversation is text only, so a greeter cannot tell which method is running. Linux Hello therefore adds a side channel: `pam_linuxhello` runs fprintd and Howdy concurrently itself (instead of stacking `pam_fprintd` and `pam_howdy`) and publishes the live state on the Agent's D-Bus API (`MethodsAvailable`, `ActiveMethod`, `State`, `Result`). The login manager and the Prompt UI render from that one state through a shared QML component; the lock screen shows the text of KDE's own Face and Fingerprint PAM services on Plasma 6.8 and later ([ADR-0016](../adr/0016-prompt-hosts.md)). The state is served by the Agent on the system bus, per uid, by method reply or unicast signal and never broadcast ([ADR-0014](../adr/0014-agent-bus.md)); every prompt has an opaque identifier that the PAM module and the component both derive, because the PAM conversation is text only.
 
 ### Additions to the C4 model
 
@@ -138,14 +138,12 @@ A PAM conversation is text only, so a greeter cannot tell which method is runnin
 | `pam_linuxhello` | Method Orchestrator | Runs face, fingerprint and PIN in parallel; first success wins; cancels the rest |
 | Linux Hello Agent | Auth State Publisher | D-Bus signals for method, state and result per prompt |
 | Plasma Integration | Auth Prompt QML Component | Shared method indicator and switcher for the greeter, lock screen and Prompt UI |
-| Plasma Integration | Camera Stream Owner | Opens the RGB and IR streams in a fixed order with a retry |
-| Plasma Integration | Face Enrolment Module | Preview, guided capture and test; calls Howdy as a subprocess |
-| Plasma Integration | SDDM Theme | Embeds the shared component in SDDM |
-| Plasma Integration | Lock Screen Shell Package | Embeds the shared component in the lock screen |
+| Plasma Integration | Face Enrolment Module | Guided text, recognition test and delete; calls Howdy through the Agent's privileged helper; no live preview in 1.0 |
+| Plasma Integration | SDDM Theme | Own theme package embedding the shared component in SDDM |
 
 New external dependencies: Howdy's match, enrolment and test commands (subprocess and root CLI only), the camera as V4L2 nodes, KDE's fingerprint enrolment UI. All of these are in [workspace.dsl](../workspace.dsl).
 
-Answered by spikes: Howdy has no library or D-Bus interface and no preview ([0008](../spikes/0008-howdy-interface.md)); the login manager and lock screen have no prompt slot ([0009](../spikes/0009-plasma-prompt-component.md)). Open, each needing an ADR: the capture-and-detect component, and the lock-screen and SDDM routes.
+Decided by [ADR-0015](../adr/0015-face-capture-and-enrolment.md) and [ADR-0016](../adr/0016-prompt-hosts.md): Howdy is called as it is and there is no live preview in 1.0; the login manager gets an own SDDM theme and the lock screen uses KDE's stock Face and Fingerprint services (text only; on Plasma 6.6 inside the `kde` service). Spikes [0008](../spikes/0008-howdy-interface.md) and [0009](../spikes/0009-plasma-prompt-component.md) have the evidence.
 
 ## Policy
 

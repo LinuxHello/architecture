@@ -7,7 +7,7 @@ owner: "@atterdag"
 concepts: [deployment, arc42]
 tags: [architecture, arc42, arc42-gap]
 sources: ["README.md", "../workspace.dsl", "https://docs.arc42.org/section-7/"]
-date: 2026-11-05
+date: 2026-11-08
 ---
 
 # 7. Deployment view
@@ -18,5 +18,6 @@ Part of the [Arc42 architecture documentation](README.md).
 
 What exists today:
 
+- The Agent is a systemd system service on the system bus, running as a dedicated unprivileged user ([ADR-0014](../adr/0014-agent-bus.md)). Its bus policy, unit and AppArmor profile are not written yet.
 - The systemd sandboxing and AppArmor confinement each daemon runs under: [section 8, Security hardening](08-crosscutting-concepts.md#security-hardening).
 - How releases are built and attested: [ADR-0006](../adr/0006-attested-quality-gates-and-releases.md).

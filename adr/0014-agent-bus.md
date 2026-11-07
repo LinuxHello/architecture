@@ -2,7 +2,7 @@
 type: adr
 subject: The Agent is a system service on the system bus, and state reaches prompts by method call or addressed signal
 artifact: adr
-status: proposed
+status: accepted
 owner: "@atterdag"
 concepts: [dbus, system-bus, pam, agent, one-way-door]
 tags: [adr, one-way-door, dbus]
@@ -14,7 +14,7 @@ date: 2026-11-08
 
 ## Status
 
-Proposed, 2026-11-08.
+Accepted, 2026-11-08, on the maintainer's decision the same day (proposed 2026-11-08).
 
 ## Context
 
