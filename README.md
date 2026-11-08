@@ -1,6 +1,6 @@
 # Linux Hello architecture
 
-The architecture of [Linux Hello](https://github.com/LinuxHello/linux-hello) at the system context, container and component levels, and the decisions behind it ([ADR-0011](https://github.com/LinuxHello/linux-hello/blob/main/docs/adr/0011-architecture-repository.md)):
+The architecture of [Linux Hello](https://github.com/LinuxHello/linux-hello) at the system context, container and component levels, and the decisions behind it ([ADR-0011](adr/0011-architecture-repository.md)):
 
 - the Arc42 sections, one note per section;
 - the C4 model, `workspace.dsl` (Structurizr DSL), levels 1 to 3;
@@ -21,8 +21,9 @@ The content moved here from `linux-hello` at commit [`3212f15`](https://github.c
 | [adr/](adr/README.md) | Architecture decision records |
 | [spikes/](spikes/README.md) | Spikes that test the assumptions the architecture rests on |
 | [templates/](templates/) | Templates for ADRs, spikes and notes |
+| [scripts/](scripts/) | `check-docs.py` (the `notes` check), `render-diagrams.sh` (the SVGs), and the scripts that pick and mirror the pinned Structurizr image (`resolve-image.sh`, `mirror-image.sh`) |
 
-The repository is an Obsidian vault. Links are relative Markdown links, never wikilinks, so the notes render on GitHub too.
+The repository is an Obsidian vault; its settings (`.obsidian/`) are not tracked. Links are relative Markdown links, never wikilinks, so the notes render on GitHub too.
 
 ## Checks
 
@@ -33,6 +34,7 @@ The repository is an Obsidian vault. Links are relative Markdown links, never wi
 | `dsl` | `workspace.dsl` parses (Structurizr CLI) | yes |
 | `diagrams` | the images in [diagrams/](diagrams/README.md) say the same words as a fresh render of `workspace.dsl` | no: add it to the branch rules after it has run green a few times |
 | `c4-code (advisory)` | `linux-hello`'s crates still name elements of the proposed model | no: the code may follow in its own pull request |
+| `Mirror images` | a manual workflow (`workflow_dispatch`) that copies the pinned Structurizr image to `ghcr.io/linuxhello` and checks that it pulls without credentials | no |
 
 ## Contributing
 
@@ -40,4 +42,4 @@ The rules of `linux-hello`'s [AGENTS.md](https://github.com/LinuxHello/linux-hel
 
 ## Licence
 
-LGPL-3.0-or-later, as `linux-hello` ([ADR-0002](https://github.com/LinuxHello/linux-hello/blob/main/docs/adr/0002-licence-lgpl-3-or-later.md)).
+LGPL-3.0-or-later, as `linux-hello` ([ADR-0002](adr/0002-licence-lgpl-3-or-later.md)).
