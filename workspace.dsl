@@ -2,7 +2,7 @@
  * Linux Hello — C4 workspace (System Context, Container, Component)
  * Source notes: docs/architecture/ (Arc42 sections, README.md)
  * Status: draft, UNTESTED — validate with the Structurizr CLI before use.
- * Date: 2026-11-08 (ADR-0005 option B; ADR-0014 to 0017; spikes 0008-0012 and 0014)
+ * Date: 2026-11-08 (ADR-0005 option B; ADR-0014 to 0017; spikes 0008-0012 and 0014; deployment of the Agent)
  */
 workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the Linux desktop" {
 
@@ -196,10 +196,33 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
         # CLI
         cliCommands -> cliAgentClient "Invokes"
         cliAgentClient -> dbusApi "Calls" "D-Bus"
+
+        # Deployment: only what runs today. The PAM module, providers and Plasma pieces have no unit yet.
+        workstation = deploymentEnvironment "Workstation" {
+            deploymentNode "Ubuntu workstation" "Ubuntu 24.04 or 26.04 LTS with a TPM 2.0 (tested in a VM with a software TPM)" "Linux" {
+                systemd = infrastructureNode "systemd" "Starts the unit as user linuxhello with a strict sandbox; ExecStartPre refuses to start unless the AppArmor profile is loaded in enforce mode" "linuxhello-agent.service"
+                apparmorLsm = infrastructureNode "AppArmor" "Profile linuxhello-agent in enforce mode: system bus socket, /dev/tpmrm0, /var/lib/linuxhello, admin policy read-only; no network, capability, ptrace or home directory" "Kernel LSM"
+                systemBus = infrastructureNode "System bus" "dbus-daemon; its policy file: any user calls the Agent's interface; only the Agent's user owns the name and sends its signals" "D-Bus system bus"
+                tpmDevice = infrastructureNode "TPM resource manager" "/dev/tpmrm0, the only device the unit allows" "Kernel"
+                stateDir = infrastructureNode "State directory" "/var/lib/linuxhello, mode 0700" "Filesystem"
+                adminPolicyDir = infrastructureNode "Admin policy" "/etc/linuxhello/policy.d, read-only for the Agent" "Filesystem"
+                agentInstance = containerInstance agent
+            }
+        }
+        systemd -> agentInstance "Starts and sandboxes" "systemd unit"
+        apparmorLsm -> agentInstance "Confines (enforce)"
+        agentInstance -> systemBus "Owns the Agent's bus name and serves the state API" "D-Bus, unix socket"
+        agentInstance -> tpmDevice "Will open (not yet used)" "/dev/tpmrm0"
+        agentInstance -> stateDir "Reads and writes" "Filesystem"
+        agentInstance -> adminPolicyDir "Reads" "Filesystem"
     }
 
     views {
         systemContext linuxHello "Context" {
+            include *
+            autoLayout lr
+        }
+        deployment linuxHello "Workstation" "AgentDeployment" {
             include *
             autoLayout lr
         }
