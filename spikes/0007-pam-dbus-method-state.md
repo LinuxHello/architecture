@@ -63,6 +63,18 @@ Every finding below: **tested** as source reading (files fetched at the named ta
 
 **Not done, so untested:** a prototype module opening a system bus connection in each context and sending to the Agent; how long a connection takes inside the conversation; whether an async runtime in the module coexists with kscreenlocker's worker thread; which environment `sudo`'s environment replacement leaves the module; the lock screen with `kde-fingerprint` configured.
 
+## Runtime check (2026-11-08)
+
+The desk research left the runtime open. `make vm-test-pam` in the workstation repository ran it in the test VM (Ubuntu 24.04 with sudo 1.9.15p5, Ubuntu 26.04 with sudo-rs 0.2.13) with the Agent from linux-hello#115 on the system bus under its enforcing profile. A probe run by `pam_exec` in a PAM stack recorded its uids and called the Agent (`GetState` with a bad id: the Agent answers `invalid argument`, so the call reached it), then tried the session bus of a logged-in user (`DBUS_SESSION_BUS_ADDRESS` set to its socket). **Tested** on both releases, by hand:
+
+| Context | Process uids in the probe | System bus | Session bus of the user |
+| :-- | :-- | :-- | :-- |
+| Root as PAM caller (`pamtester`) | 0 0 0 0 | reached | refused (`Transport endpoint is not connected`) |
+| `sudo`, probe with the caller's real uid | user, user, user, user | reached | reached |
+| `sudo`, probe with `seteuid` (effective uid 0) | 0 0 0 0 | reached | refused |
+
+Findings 5 to 7 of the desk research hold: the system bus admits every process, the session bus only its owner, so a process with effective uid 0 cannot use the user's session bus. Limits: `pam_exec` sets all four uids to the one it runs under, so the table shows the effective uid 0 case but not a process with real uid the user and effective uid 0; the SDDM greeter, the lock screen and a console login were not run; connection time inside a conversation, the async runtime and `sudo`'s environment replacement remain untested.
+
 ## Answer
 
 **Partly.**
