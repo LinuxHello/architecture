@@ -11,8 +11,8 @@
 # cannot write into this repository.
 set -euo pipefail
 
-# structurizr/structurizr v2026.09.19, pinned by digest.
-IMAGE="docker.io/structurizr/structurizr@sha256:4cadb3a52ba0dcca28e31ee0d68325d13bc27a90e067b6b793089eab0fa7dfac"
+# The Structurizr image is pinned by digest in scripts/image.env and pulled by scripts/resolve-image.sh
+# (the organisation's registry first, Docker Hub as the fallback).
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 mode=render
@@ -31,6 +31,7 @@ need() { command -v "$1" >/dev/null 2>&1 || { echo "missing prerequisite: $1 ($2
 engine=""
 for e in docker podman; do command -v "$e" >/dev/null 2>&1 && { engine="$e"; break; }; done
 [[ -n "$engine" ]] || { echo "missing prerequisite: docker or podman (runs Structurizr)" >&2; exit 1; }
+IMAGE="$(bash "$(dirname "${BASH_SOURCE[0]}")/resolve-image.sh" "$engine")" || exit 1
 need node "renders with Playwright"
 need npm "installs playwright-core from scripts/render/package-lock.json"
 if [[ -z "${CHROME_BIN:-}" ]]; then

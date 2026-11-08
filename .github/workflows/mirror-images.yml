@@ -1,0 +1,38 @@
+name: Mirror images
+
+# Copies the pinned Structurizr image (scripts/image.env) from Docker Hub to the organisation's
+# registry, keeping its digest, so diagram rendering does not depend on Docker Hub's pull limits.
+# Run it by hand after the pin changes. It is the only workflow here that can write packages, so it
+# runs on manual dispatch from main only. Actions are pinned to commit SHAs; Dependabot updates them.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    name: mirror
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: skopeo is available
+        run: command -v skopeo >/dev/null || sudo apt-get install --yes --no-install-recommends skopeo
+      - name: Log in to the registry with the job's own token
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: printf '%s' "$TOKEN" | skopeo login ghcr.io --username "$ACTOR" --password-stdin
+      - name: Copy the image and check that the copy has the pinned digest
+        run: bash scripts/mirror-image.sh
+      - name: The copy can be pulled without credentials
+        run: |
+          source scripts/image.env
+          skopeo logout ghcr.io
+          if ! skopeo inspect --raw "docker://$STRUCTURIZR_MIRROR@$STRUCTURIZR_DIGEST" >/dev/null 2>&1; then
+            echo "::warning::The copy exists but cannot be pulled without credentials. Make the package public in the organisation's package settings, and give this repository access to it."
+          fi
