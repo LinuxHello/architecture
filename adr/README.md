@@ -25,6 +25,7 @@ date: 2026-11-08
 - [ADR-0011: An architecture repository](0011-architecture-repository.md)
 - [ADR-0012: D-Bus names](0012-dbus-names.md)
 - [ADR-0013: Browser path for 1.0](0013-browser-fallback.md) (superseded by ADR-0017)
+- [ADR-0018: Where the user layer of the routing policy lives](0018-user-policy-layer.md) (proposed)
 - [ADR-0014: The Agent's bus](0014-agent-bus.md)
 - [ADR-0015: Face capture, enrolment and preview](0015-face-capture-and-enrolment.md)
 - [ADR-0016: Where the authentication prompt is shown](0016-prompt-hosts.md)
