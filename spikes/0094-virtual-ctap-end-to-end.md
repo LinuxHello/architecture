@@ -57,7 +57,9 @@ In the user-verification run the device log shows only a dummy `makeCredential` 
 
 ## Answer
 
-**Yes**, for non-resident credentials without user verification, with stock clients: a TPM-backed, PIN-rooted credential was created and used by libfido2, Chromium and Firefox through a `uhid` device, and the PIN change of spike 0011 works under it. Option B of [ADR-0005](../adr/0005-provider-path.md) is viable for the first end-to-end test.
+**Yes**, for the transport and the key hierarchy, for non-resident credentials without user verification, with stock clients: a TPM-backed, PIN-rooted credential was created and used by libfido2, Chromium and Firefox through a `uhid` device, and the PIN change of spike 0011 works under it. Option B of [ADR-0005](../adr/0005-provider-path.md) is viable for the first end-to-end test.
+
+**What the Yes does not cover** (review of 2026-11-08). The question also asked for a real site and a Linux Hello unlock gate. The test page was a local one on `localhost`, and presence was approved without any prompt, so neither was tested. Follow-ups: the real-site and browser matrix ([#118](https://github.com/LinuxHello/linux-hello/issues/118)), binding keys to the relying party inside the TPM ([#119](https://github.com/LinuxHello/linux-hello/issues/119)), resident keys, presence and user verification ([#120](https://github.com/LinuxHello/linux-hello/issues/120)), and the helper's privilege and attack surface ([#121](https://github.com/LinuxHello/linux-hello/issues/121)).
 
 What it costs, from this one prototype:
 
@@ -66,6 +68,9 @@ What it costs, from this one prototype:
 - **No user verification, no user presence.** The prototype signs without any prompt, so any local process that can open the HID device gets assertions. distribution udev rules typically let the logged-in user open FIDO `hidraw` nodes, so the real helper must ask the Prompt UI for presence on every request and map the Agent's unlock state to UV. Firefox completed a `userVerification: required` create against a device that never sets UV, so the relying party must check the UV flag; Chromium blocked.
 - **Doubled signatures in Firefox.** Two `GetAssertion` signatures per `get`; a per-sign prompt or a PIN attempt would be hit twice unless the helper recognises the repeat.
 - **The TPM counts wrong PINs.** A wrong PIN used by the helper increments the dictionary-attack counter; three failures lock swtpm. How the Agent holds the unlock, so the helper never submits a wrong PIN by itself, is open.
+- **The prototype does not bind a credential to its relying party.** It tags the credential ID with the first 4 bytes of the relying-party hash and compares those; the TPM key itself signs for any request, and the signature covers whatever hash the request carries. A site that learns a credential ID of another site (or whose hash matches in those 4 bytes) gets a signature from that key. That cannot satisfy P-03 (a request for one relying party is never answered with another's credential). The real helper has to make the key unusable for other sites inside the TPM, for example through the key's authorisation policy or an RP-keyed value in the sealed data, and compare the full hash.
+- **Privilege and attack surface (not measured).** The helper needs `/dev/uhid`, which is `root`-only by default, and `/dev/tpmrm0`; the prototype ran as root with no profile. A real helper needs its own AppArmor profile, a bus policy for the Agent, and an answer to what creating an input device lets an attacker do if the helper is compromised (the kernel `uhid` code path, a fake keyboard). That cost is the open part of the issue's method.
+- **Per-relying-party routing is invisible to the browser.** There is one virtual device. Which provider answers (a TPM key or a KeePassXC passkey) is decided by the policy behind it, and the browser shows only "security key". Any choice the user must make has to be asked by the Prompt UI, and a request without an allow list (a discoverable credential) needs the helper to search every provider's index.
 - **Speed is not a problem.** Create 0.5 to 1.0 s and get 0.5 to 0.6 s with `tpm2-tools` process calls on a software TPM; a hardware TPM and `tss-esapi` were not measured.
 
 Consequences for the design:
@@ -73,6 +78,73 @@ Consequences for the design:
 - The `Virtual CTAP Authenticator` container is feasible as drawn; its needs are resident keys through the Credential Index, `getInfo` options for UV, presence and UV prompts through the Prompt UI, and one signature per request.
 - Browsers are covered without an extension. [ADR-0013](../adr/0013-browser-fallback.md) (own extension and native-messaging host) is not needed to reach the authenticator and should be revisited for what it adds beyond this path, such as a platform-authenticator presentation.
 - Re-run on Chrome stable and the distribution Firefox (Snap), on a hardware TPM, and with a real relying party before the first release.
+
+## Reproducing the evidence
+
+Environment as in *Method*; the daemon runs as root in the VM (`sudo -E LH_PIN=123456 python3 lhctap.py`, source in the appendix).
+
+**libfido2 round trip (tested 2026-11-08 on Ubuntu 24.04, libfido2 1.14.0; evidence 1 and 2).**
+
+```sh
+{ echo "credential challenge" | openssl sha256 -binary | base64; echo example.test; echo alice; head -c 32 /dev/urandom | base64; } > cred_param
+sudo fido2-cred -M -i cred_param /dev/hidraw0 es256 | sudo fido2-cred -V -o cred es256     # exit 0 0
+sudo head -1 cred > cred_id; sudo tail -n +2 cred > pubkey
+{ echo "assertion challenge" | openssl sha256 -binary | base64; echo example.test; sudo head -1 cred; } > assert_param
+sudo fido2-assert -G -i assert_param /dev/hidraw0 | sudo fido2-assert -V pubkey es256      # exit 0 0
+# the same credential id for another relying party (other.test instead of example.test):
+#   fido2-assert: fido_dev_get_assert: FIDO_ERR_NO_CREDENTIALS
+```
+
+**Browsers (tested 2026-11-07 and 08, evidence 5).** The page below, served with `python3 -m http.server 8000` from its directory and opened at `http://localhost:8000/` in each browser (add `?uv=required` or `?rk=required` for the two option rows), clicking *create* and then *get*. Chromium 156.0.8078.4 and Firefox 157.0 were Playwright builds started headed under `xvfb-run`. The Playwright script that clicked the buttons was not kept; the page and the device log (`lhctap.log`, one line per CTAP request) show every result.
+
+```html
+<!doctype html><meta charset=utf-8><title>Linux Hello spike</title>
+<button id=create>create</button> <button id=get>get</button> <pre id=out>idle</pre>
+<script>
+const b64 = b => btoa(String.fromCharCode(...new Uint8Array(b)));
+let cred = null;
+create.onclick = async () => { try {
+  out.textContent = 'CREATE pending';
+  cred = await navigator.credentials.create({publicKey: {
+    challenge: crypto.getRandomValues(new Uint8Array(32)), rp: {name: 'Spike', id: 'localhost'},
+    user: {id: new Uint8Array([1,2,3,4]), name: 'alice', displayName: 'Alice'},
+    pubKeyCredParams: [{type: 'public-key', alg: -7}],
+    authenticatorSelection: {userVerification: (new URLSearchParams(location.search).get("uv") || "discouraged"), residentKey: (new URLSearchParams(location.search).get("rk") || "discouraged")},
+    attestation: 'none', timeout: 60000}});
+  out.textContent = 'CREATE OK rawId=' + cred.rawId.byteLength + ' bytes, attachment=' + cred.authenticatorAttachment +
+    ', transports=' + JSON.stringify(cred.response.getTransports ? cred.response.getTransports() : null);
+} catch (e) { out.textContent = 'CREATE ERR ' + e.name + ': ' + e.message; } };
+get.onclick = async () => { try {
+  out.textContent = 'GET pending';
+  const a = await navigator.credentials.get({publicKey: {
+    challenge: crypto.getRandomValues(new Uint8Array(32)), rpId: 'localhost', userVerification: 'discouraged',
+    allowCredentials: [{type: 'public-key', id: cred.rawId}], timeout: 60000}});
+  out.textContent = 'GET OK signature=' + a.response.signature.byteLength + ' bytes, authData=' + a.response.authenticatorData.byteLength + ' bytes';
+} catch (e) { out.textContent = 'GET ERR ' + e.name + ': ' + e.message; } };
+</script>
+```
+
+**Wrong PIN and PIN change (tested 2026-11-07, evidence 3 and 4).** The script `t2.sh`, run in the guest after one credential had been made (`cred.out` is the output of `fido2-cred -M`, kept in the guest only):
+
+```sh
+cd ~
+assert() { CDH2=$(head -c 32 /dev/urandom | base64 -w0); CRED=$(sudo sed -n 5p cred.out); ( echo "$CDH2"; echo "example.test"; echo "$CRED" ) | sudo fido2-assert -G /dev/hidraw0 2>&1 | head -1 | cut -c1-120; }
+stopd() { [ -f lh.pid ] && sudo kill "$(cat lh.pid)" 2>/dev/null; sudo pkill -x python3; sleep 2; }
+startd() { sudo -E LH_PIN=$1 nohup python3 lhctap.py > lhctap.log 2>&1 & echo $! > lh.pid; sleep 5; }
+echo "== A. WRONG PIN, old credential"
+stopd; startd wrong-pin; assert; echo "TPM refused lines: $(grep -c 'TPM refused' lhctap.log)"
+echo "DA lockout counter:"; sudo tpm2_getcap properties-variable 2>/dev/null | grep -A1 TPM2_PT_LOCKOUT_COUNTER | tr -d "\n"; echo
+echo "== B. change the root key PIN in place (tpm2_changeauth), credential kept"
+stopd
+cd /var/lib/lhctap && sudo tpm2_createprimary -C o -G ecc -c prim.ctx >/dev/null && sudo tpm2_load -C prim.ctx -u r.pub -r r.priv -c r.ctx >/dev/null && sudo tpm2_changeauth -c r.ctx -C prim.ctx -p 123456 -r r.priv.new new-pin-654321; echo "changeauth exit=$?"
+sudo cp r.priv r.priv.old; sudo mv r.priv.new r.priv; cd ~
+startd new-pin-654321; echo "new PIN, old credential (blank line = signature returned):"; assert; echo "signed lines: $(grep -c 'signed in the TPM' lhctap.log)"
+echo "== C. old PIN against the new blob"
+stopd; startd 123456; assert; echo "TPM refused lines: $(grep -c 'TPM refused' lhctap.log)"
+echo "== D. old blob + old PIN (no revocation)"
+stopd; sudo cp /var/lib/lhctap/r.priv /var/lib/lhctap/r.priv.new; sudo cp /var/lib/lhctap/r.priv.old /var/lib/lhctap/r.priv
+startd 123456; assert; echo "signed lines: $(grep -c 'signed in the TPM' lhctap.log)"
+```
 
 ## Appendix: prototype (`lhctap.py`)
 
