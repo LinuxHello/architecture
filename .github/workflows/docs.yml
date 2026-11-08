@@ -30,10 +30,22 @@ jobs:
       CLI_SHA256: f5365a463fc44d539ed19bec00c48ba1e1ecda0ccfd1ba40d2e7472d264eb79a
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install the pinned Structurizr CLI
+      # The unpacked CLI is cached under its checksum, so the 98 MB download from the GitHub release
+      # CDN happens once, not on every run (it was throttled and then failed with 504). The checksum is
+      # checked on the download only; a cache entry can come only from this repository's own runs.
+      - name: Restore the pinned Structurizr CLI
+        id: cli
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/structurizr
+          key: structurizr-cli-${{ env.CLI_SHA256 }}
+      - name: Download the pinned Structurizr CLI
+        if: steps.cli.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --location --proto '=https' --output "$RUNNER_TEMP/cli.zip" "$CLI_URL"
+          curl --fail --silent --show-error --location --proto '=https' \
+            --retry 6 --retry-all-errors --retry-delay 15 --retry-max-time 300 \
+            --output "$RUNNER_TEMP/cli.zip" "$CLI_URL"
           echo "$CLI_SHA256  $RUNNER_TEMP/cli.zip" | sha256sum --check --strict --quiet -
           unzip -q "$RUNNER_TEMP/cli.zip" -d "$RUNNER_TEMP/structurizr"
       - name: The C4 model parses
