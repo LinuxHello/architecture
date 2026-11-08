@@ -62,7 +62,7 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
                 cliAgentClient = component "Agent Client" "Calls the Agent D-Bus API" "zbus"
             }
 
-            policyStore = container "User Policy" "User layer: ~/.config/linuxhello/policy.toml" "TOML" "Data"
+            policyStore = container "User Policy" "User layer, kept by the Agent" "TOML" "Data"
             adminPolicyStore = container "Admin Policy" "Admin layer: /etc/linuxhello/policy.d/*.toml, root-owned; locked keys win" "TOML" "Data"
 
             secProfiles = container "Security Profiles" "Confinement and detection shipped with Linux Hello" "AppArmor, Tetragon, alert rules" {

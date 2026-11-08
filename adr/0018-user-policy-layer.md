@@ -2,7 +2,7 @@
 type: adr
 subject: The user layer of the routing policy is kept by the Agent and set over D-Bus, not read from the home directory
 artifact: adr
-status: proposed
+status: accepted
 owner: "@atterdag"
 concepts: [policy, user-layer, agent, state, dbus]
 tags: [adr, policy]
@@ -14,7 +14,7 @@ date: 2026-11-08
 
 ## Status
 
-Proposed, 2026-11-08.
+Accepted, 2026-11-08, on the maintainer's decision the same day: option C (proposed 2026-11-08).
 
 ## Context
 

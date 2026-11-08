@@ -162,7 +162,7 @@ The Routing Policy Engine in the Agent answers one question before every credent
 ### Layers and precedence
 
 1. Built-in defaults.
-2. User layer `~/.config/linuxhello/policy.toml`, editable in Settings.
+2. User layer, kept by the Agent per uid in `/var/lib/linuxhello/users/<uid>/policy.toml` and set over D-Bus (`GetUserPolicy`, `SetUserPolicy`), from Settings or `linuxhello-ctl policy edit`; it can only tighten a default ([ADR-0018](../adr/0018-user-policy-layer.md)).
 3. Admin layer `/etc/linuxhello/policy.d/*.toml` (root-owned, 0644). Any key set here wins and is shown greyed out as "Managed by your organisation". Later: delivered by a management system, as Intune does on Windows.
 
 Most restrictive wins when two admin files conflict. The engine fails closed: a policy file that does not parse denies every operation except PIN.

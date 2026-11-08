@@ -31,7 +31,7 @@ C4 view: `container linuxHello "Containers"` in [workspace.dsl](../workspace.dsl
 | KeePassXC Provider Bridge | Rust daemon behind the Virtual CTAP Authenticator | Serves portable passkeys from KeePassXC over its browser protocol |
 | Plasma Integration | Rust/cxx-qt, QML, KCM | Prompts, the SDDM theme, enrolment, PIN and settings (own settings page next to Users); the lock screen uses KDE's stock services ([ADR-0016](../adr/0016-prompt-hosts.md)) |
 | `linuxhello-ctl` | Rust CLI | Enrol, change PIN, reset trust chain (ADR-0003), inspect policy |
-| User Policy | TOML (`~/.config/linuxhello/policy.toml`) | User layer of the policy |
+| User Policy | TOML (`/var/lib/linuxhello/users/<uid>/policy.toml`, kept by the Agent, set over D-Bus) | User layer of the policy ([ADR-0018](../adr/0018-user-policy-layer.md)) |
 | Admin Policy | TOML (`/etc/linuxhello/policy.d/*.toml`) | Admin layer; locked keys win |
 | Security Profiles | AppArmor, Tetragon, alert rules | Confinement and detection shipped with Linux Hello |
 

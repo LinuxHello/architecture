@@ -50,7 +50,7 @@ The run found one defect that no unit test could: under systemd's mount namespac
 
 - **Other containers.** The PAM module, TPM provider, KeePassXC bridge, virtual CTAP authenticator (with its privileged `uhid` helper) and Plasma pieces need units, packages and profiles of their own; the AppArmor profile and bus policy of each are still to be written.
 - **The TPM.** The Agent allows `/dev/tpmrm0` but does not use it yet. Only a software TPM was tried.
-- **Where the user layer of the routing policy lives is undecided.** [Section 5](05-building-block-view.md) names `~/.config/linuxhello/policy.toml`, but the Agent is a system service whose user cannot enter home directories (mode 0750 on both Ubuntu releases, checked in the test VM) and whose sandbox and profile deny them. The unit and profile do not grant it.
+- **The user layer of the routing policy** is decided ([ADR-0018](../adr/0018-user-policy-layer.md)): the Agent keeps it in its state directory and users set it over D-Bus, so the unit and profile need no access to home directories. The state store and the two methods (`GetUserPolicy`, `SetUserPolicy`) are not built yet.
 - **Platforms.** Only Ubuntu was tested. Which distributions Linux Hello supports is not decided, and with it whether a policy other than AppArmor is needed (Fedora uses SELinux).
 - **Packaging and updates.** Nothing builds a `.deb` or installs these files automatically; the paths above are the ones the files name in their headers.
 - How releases are built and attested: [ADR-0006](../adr/0006-attested-quality-gates-and-releases.md).
