@@ -14,7 +14,7 @@ date: 2026-11-08
 
 ## Status
 
-Accepted, 2026-11-08, on the maintainer's decision the same day: option C (proposed 2026-11-08).
+Accepted, 2026-11-08, on the maintainer's decision the same day: option C (proposed 2026-11-08). Amendment proposed 2026-11-10: what a write refuses, and what a faulty user layer leaves in force (see *Amendment 2026-11-10*); it changes points 3 and 4 and is not accepted yet.
 
 ## Context
 
@@ -45,6 +45,40 @@ The user layer was specified as `~/.config/linuxhello/policy.toml`, edited in Se
 4. **Loading.** The policy engine loads the user layer from that path. A file that cannot be parsed, for example after disk damage, is treated as before: fail closed, PIN only, for that user.
 5. **Editing.** The Settings module and `linuxhello-ctl` call the two methods. `linuxhello-ctl policy edit` opens the user's editor on a temporary copy and submits it through `SetUserPolicy`, so editing a file stays possible. The admin layer is unchanged: root-owned files in `/etc/linuxhello/policy.d/`.
 6. **No home access.** The unit and the AppArmor profile need no change; the Agent never reads `~/.config/linuxhello/`. Nothing is migrated, because no release has used the old location.
+
+### Amendment 2026-11-10: a user layer can never lower an admin rule
+
+Proposed. An integrity review of the code on 2026-11-09 ran probe tests against the implementation of points 3 and 4 and found that they let a user's layer weaken the policy ([linux-hello#127](https://github.com/LinuxHello/linux-hello/issues/127), [#128](https://github.com/LinuxHello/linux-hello/issues/128), [#131](https://github.com/LinuxHello/linux-hello/issues/131)):
+
+- **Point 4 made "fail closed" weaker than the policy it replaced.** A stored layer that parses but contradicts a default (`[pin] digits = "disallowed"`) put the user in the PIN-only state, which was built from the built-in defaults. With an admin layer that set `pin.min_length = 12` and two factors for `sudo`, the result was `min_length` 6 and the PIN alone: one `SetUserPolicy` call removed the admin's rules for that user.
+- **Point 3 accepted a layer that locks its user out.** A layer with `factors = 2` and only `pin` allowed for `login`, `unlock` and `sudo` parses, was stored, and left those contexts unsatisfiable. The file is in the Agent's state, so only root can remove it. Any process running as the user could do this.
+- **"The merge ignores loosening" did not hold for relying-party classes.** The defaults have no class, so a user class with `prompt = "none"` took effect as written.
+
+The storage, the two methods and who may call them (points 1, 2, 5 and 6) are unchanged. Points 3 and 4 become:
+
+3. **Validation on write.** `SetUserPolicy` refuses with `InvalidArgs`, and keeps the previous layer, when the text
+   - does not parse with the strict schema, has an unknown key or an out-of-range value, or is over 64 KiB (as before);
+   - contradicts the layers it is merged with: the defaults and the admin layers on disk at that moment;
+   - would leave a context needing more methods than it allows. A context that the admin layers already leave that way is not held against the user.
+
+   When the admin layers cannot be read or contradict each other, the policy is PIN-only whatever the user stores, and the text is checked against the defaults alone. Loosening is still not refused on write: the merge ignores it, now also for relying-party classes, where a user class can only make the decision for a relying party stricter and never joins or overrides an admin class ([policy semantics, *Layering*](https://github.com/LinuxHello/linux-hello/blob/main/docs/architecture/policy-semantics.md#layering)).
+4. **Loading.** The policy engine loads the user layer from that path. A stored file that cannot be read or parsed, for example after disk damage, or that contradicts an admin layer written later, still fails closed for that user: PIN only, biometrics off. That PIN-only state is built on the admin layers and the defaults, and keeps their PIN rules, each context's factor count and the admin's relying-party classes, so a user's file can never lower an admin rule. A context that then needs two factors is unsatisfiable, not lowered. Only when the admin layers themselves are at fault is the state built from the built-in defaults alone, as before.
+
+Alternatives considered for a faulty user layer:
+
+| Option | Pros | Cons |
+| :-- | :-- | :-- |
+| Keep point 4: PIN-only from the defaults | Simple; one PIN-only state | A user's file removes admin rules; "fail closed" is the weaker state |
+| Drop the faulty user layer and apply admin and defaults as if it were absent | The user is never locked out by a damaged file | Silently loses the user's own tightening, such as biometrics switched off; that is failing open for that user |
+| **PIN-only built on the admin layers** | Never weaker than the admin layers or than the user's lost tightening; one rule to explain | A damaged file plus an admin rule of two factors leaves a context unusable through Linux Hello until the file is replaced; the account password path must remain ([linux-hello#147](https://github.com/LinuxHello/linux-hello/issues/147)) |
+
+**Easier (amendment):** an administrator's PIN and factor rules hold whatever a user stores; a stored layer cannot lock its user out by itself; the property "the user's layer only tightens" can be stated and tested for every key.
+
+**Harder (amendment):** `SetUserPolicy` reads the admin directory on every write, so the answer depends on the admin layers at that moment, and a later admin change can still make a stored layer contradictory (handled at load); the check counts the methods a context allows, not the methods the user has enrolled, so two factors with an unenrolled fingerprint is still accepted; the PIN-only state now has two forms, which the status shown to the user must tell apart.
+
+Not in this amendment, and still open in [linux-hello#131](https://github.com/LinuxHello/linux-hello/issues/131): a fresh verification before a policy change, an administrator's command to clear one user's layer, and auditing the change.
+
+Follow-ups, once accepted: the properties and tests named in [linux-hello#159](https://github.com/LinuxHello/linux-hello/pull/159) (`user_layer_contradicting_defaults_is_refused_on_write`, `user_policy_that_makes_a_context_unsatisfiable_is_refused_on_write`, `damaged_user_layer_does_not_remove_admin_rules`, `pin_only_state_is_never_weaker_than_the_admin_layer`, `user_layer_cannot_lower_rp_prompt_below_default`); the pin bump in that pull request; the "fails closed: a policy file that does not parse denies every operation except PIN" sentence in [section 8](../arc42/08-crosscutting-concepts.md#layers-and-precedence), which stays true and gains the admin-rules clause.
 
 ## Consequences
 
