@@ -2,7 +2,7 @@
 type: adr
 subject: The PIN travels from the PAM module to the Agent on a dedicated unix socket, never as a D-Bus message
 artifact: adr
-status: proposed
+status: accepted
 owner: "@atterdag"
 concepts: [pin, pam, agent, unix-socket, so-peercred, tpm-sessions, zeroize]
 tags: [adr, security, pin]
@@ -14,7 +14,7 @@ date: 2026-11-15
 
 ## Status
 
-Proposed, 2026-11-15. Amends [ADR-0014](0014-agent-bus.md) for the PIN only. Answers [issue 140](https://github.com/LinuxHello/linux-hello/issues/140). The maintainer chose the dedicated Agent socket (option A below) on 2026-11-15; decisions 2 to 5 are proposed in the issue and need your review.
+Accepted, 2026-11-15, on the maintainer's decision the same day (proposed 2026-11-15). Amends [ADR-0014](0014-agent-bus.md) for the PIN only. Answers [issue 140](https://github.com/LinuxHello/linux-hello/issues/140). The maintainer chose the dedicated Agent socket (option A below) and accepted decisions 2 to 5 as written.
 
 ## Context
 
