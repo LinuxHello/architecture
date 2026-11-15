@@ -27,7 +27,7 @@ A section marked **gap** has no content yet; nothing has been invented to fill i
 | 7. Deployment view | [07-deployment-view.md](07-deployment-view.md) | Gap |
 | 8. Crosscutting concepts | [08-crosscutting-concepts.md](08-crosscutting-concepts.md), [policy-semantics.md](https://github.com/LinuxHello/linux-hello/blob/main/docs/architecture/policy-semantics.md), [docs/security/](https://github.com/LinuxHello/linux-hello/blob/main/docs/security/README.md) | Written |
 | 9. Architecture decisions | [09-architecture-decisions.md](09-architecture-decisions.md) → [docs/adr/](../adr/README.md) | Written |
-| 10. Quality requirements | [10-quality-requirements.md](10-quality-requirements.md) | Scenarios: the security properties; quality tree is a gap |
+| 10. Quality requirements | [10-quality-requirements.md](10-quality-requirements.md) | Quality tree and scenarios L1 to L5 and A1 to A3 with budgets; the security properties |
 | 11. Risks and technical debt | [11-risks-and-technical-debt.md](11-risks-and-technical-debt.md) | Open questions; risk register is a gap |
 | 12. Glossary | [12-glossary.md](12-glossary.md) | Gap |
 
