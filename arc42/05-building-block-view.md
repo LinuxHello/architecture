@@ -24,8 +24,8 @@ C4 view: `container linuxHello "Containers"` in [workspace.dsl](../workspace.dsl
 
 | Container | Technology | Responsibility |
 | :-- | :-- | :-- |
-| Linux Hello Agent | Rust daemon, systemd system service, D-Bus on the system bus ([ADR-0014](../adr/0014-agent-bus.md)) | Unlock state, auth state, routing policy, PIN, enrolment and reset orchestration |
-| PAM module `pam_linuxhello` | Rust `cdylib` | Runs face, fingerprint and PIN in parallel; PIN verified against the TPM root key; reports state to the Agent |
+| Linux Hello Agent | Rust daemon, systemd system service, D-Bus on the system bus ([ADR-0014](../adr/0014-agent-bus.md)) | Unlock state, auth state, routing policy, PIN, the method orchestrator (face, fingerprint and PIN in parallel, [ADR-0023](../adr/0023-pam-module-and-login-failure.md)), enrolment and reset orchestration |
+| PAM module `pam_linuxhello` | Rust `cdylib` | Thin synchronous client of the Agent ([ADR-0023](../adr/0023-pam-module-and-login-failure.md)): opens the prompt, hands the conversation to the orchestrator in the Agent, waits with a hard deadline and maps the answer to a PAM code; `PAM_AUTHINFO_UNAVAIL` when Linux Hello is unavailable |
 | Virtual CTAP Authenticator | Rust daemon with a privileged `uhid` helper ([ADR-0005](../adr/0005-provider-path.md) option B) | Presents Linux Hello to browsers and apps as a USB security key; checks unlock and routing policy; calls the providers |
 | TPM Credential Provider | Rust daemon behind the Virtual CTAP Authenticator | Creates and uses device-bound passkeys under the per-user TPM root key |
 | KeePassXC Provider Bridge | Rust daemon behind the Virtual CTAP Authenticator | Serves portable passkeys from KeePassXC over its browser protocol |
