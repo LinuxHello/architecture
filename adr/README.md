@@ -31,5 +31,6 @@ date: 2026-11-08
 - [ADR-0016: Where the authentication prompt is shown](0016-prompt-hosts.md)
 - [ADR-0017: Browser path for 1.0, after ADR-0005 option B](0017-browser-path.md)
 - [ADR-0019: A shared memory for the coding agents](0019-shared-agent-memory.md) (proposed)
+- [ADR-0020: Presence and verification that a process of the same user cannot forge](0020-presence-and-verification.md) (proposed; amends ADR-0017)
 
 New ADRs start from [the template](../templates/adr.md).
