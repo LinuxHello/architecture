@@ -38,7 +38,14 @@ The user-facing requirements UX1–UX8 are in [section 8, User experience](08-cr
 
 ## 1.2 Quality goals
 
-**Gap.** No quality goals are written down yet. The invariants in [AGENTS.md](https://github.com/LinuxHello/linux-hello/blob/main/AGENTS.md#invariants) and the design rules in [section 4](04-solution-strategy.md#design-rules) constrain the design but are not stated as ranked quality goals.
+Ranked. A higher goal wins when two conflict; the reasons are the adoption requirement ("fast and robust enough that people keep it switched on") and the invariants in [AGENTS.md](https://github.com/LinuxHello/linux-hello/blob/main/AGENTS.md#invariants).
+
+| Rank | Goal | What it means | Where it is tested |
+| :-- | :-- | :-- | :-- |
+| 1 | Security | The PIN is the root; nothing silently weakens authentication; a process of the same user cannot forge presence ([ADR-0020](../adr/0020-presence-and-verification.md)) | The security properties in [docs/security/](https://github.com/LinuxHello/linux-hello/blob/main/docs/security/README.md) |
+| 2 | Availability at login | A failure of Linux Hello never locks the user out: the account password still works ([ADR-0023](../adr/0023-pam-module-and-login-failure.md)) | Scenarios A1 to A3 in [section 10.2](10-quality-requirements.md#102-quality-scenarios) |
+| 3 | Speed | Authentication is fast enough that nobody switches it off | Scenarios L1 to L5 in [section 10.2](10-quality-requirements.md#102-quality-scenarios) |
+| 4 | Usability | The user always sees which method is running and what to do next | UX1 to UX8 in [section 8](08-crosscutting-concepts.md#user-experience) |
 
 ## 1.3 Stakeholders
 
