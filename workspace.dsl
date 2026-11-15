@@ -34,7 +34,7 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
 
             tpmProvider = container "TPM Credential Provider" "Device-bound passkeys under the per-user TPM root key" "Rust daemon" {
                 tpmProviderApi = component "Provider Interface" "Credential operations the Virtual CTAP Authenticator calls; knows nothing about uhid, so another front end can replace it (ADR-0005)" "zbus"
-                credStore = component "Credential Index" "Maps relying party and credential ID to TPM key handles; no private material" "Rust"
+                credStore = component "Credential Index" "Resident (discoverable) credentials kept by the Agent: handle (the credential ID of a resident key) to relying party, user entity, provider and TPM-wrapped key blobs; answers a get with no allow list; no private key material (spike 0120)" "Rust"
                 tpmKeys = component "TPM Key Service" "Root key as a non-primary child of a storage primary, PIN change in place (new blob, old blob deleted), child keys, policy sessions, signing (spike 0011)" "Rust"
                 tpmFfi = component "TPM FFI" "The only crate allowed unsafe code" "tss-esapi"
             }
@@ -48,7 +48,7 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
 
             plasma = container "Plasma Integration" "Prompts, greeter and lock-screen integration, enrolment and settings" "Rust/cxx-qt, QML, KCM" {
                 authPrompt = component "Auth Prompt QML Component" "Shared method indicator and switcher; renders Agent auth state (UX1-UX5). One QML module in the system QML directory, imported by every host below (spike 0009)" "QML"
-                promptUi = component "Prompt UI" "In-session user-presence and provider-choice dialogs, outside the calling app" "QML"
+                promptUi = component "Prompt UI" "In-session presence, verification and credential/provider-choice dialogs, outside the calling app. Shows the relying-party id from the request and labels from the Credential Index, never client text; confined process (own AppArmor profile, not dumpable) started by the Agent; a click is never a verification (spike 0120, ADR-0020 proposed on #139)" "QML"
                 sddmTheme = component "SDDM Theme" "Own theme package (a Breeze fork) that embeds the shared prompt in SDDM (ADR-0016). The Plasma Login Manager needs an upstream change and is not part of 1.0" "QML"
                 kcm = component "Linux Hello Settings Module" "Own settings page next to Users in System Settings (kcm_users has no extension point, spike 0010): methods, policy (UX7a)" "KCM, QML"
                 faceEnrol = component "Face Enrolment Module" "Capture, recognition test and delete through Howdy; status text and the test result, no live preview in 1.0 (ADR-0015; UX6a deferred)" "QML, Rust"
@@ -129,7 +129,7 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
         faceEnrol -> howdy "Enrol, test, delete through the howdy CLI in a privileged Agent helper; no preview or detection results (ADR-0015)" "subprocess"
         howdy -> camera "Reads the IR stream while it captures" "V4L2"
         pinSettings -> dbusApi "Change PIN, lockout status" "D-Bus"
-        ctapHelper -> promptUi "User-presence and choice prompts" "D-Bus"
+        ctapHelper -> promptUi "Presence, verification and choice prompts, one per request" "D-Bus"
         promptUi -> dbusApi "Reads routing decision, authenticates" "D-Bus"
 
         # PAM module
