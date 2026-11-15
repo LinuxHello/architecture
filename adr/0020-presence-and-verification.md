@@ -2,7 +2,7 @@
 type: adr
 subject: User presence is a gesture the session cannot synthesise, and user verification is tied to a request or a window of at most 60 seconds
 artifact: adr
-status: proposed
+status: accepted
 owner: "@atterdag"
 concepts: [webauthn, ctap, user-presence, user-verification, prompt-ui, apparmor, threat-model]
 tags: [adr, security, browser]
@@ -14,7 +14,7 @@ date: 2026-11-15
 
 ## Status
 
-Proposed, 2026-11-15. Amends [ADR-0017](0017-browser-path.md), decision item 1 and the "silent use" consequence. Answers [issue 139](https://github.com/LinuxHello/linux-hello/issues/139), on the evidence of [spike 0120](../spikes/0120-resident-keys-presence-and-uv.md). The maintainer decided on 2026-11-15 that this issue closes on a decision first, and that the verification window is a hard cap of 60 seconds. The four open points at the end are for the maintainer.
+Accepted, 2026-11-15, on the maintainer's decision the same day (proposed 2026-11-15). Amends [ADR-0017](0017-browser-path.md), decision item 1 and the "silent use" consequence. Answers [issue 139](https://github.com/LinuxHello/linux-hello/issues/139), on the evidence of [spike 0120](../spikes/0120-resident-keys-presence-and-uv.md). The maintainer decided on 2026-11-15 that this issue closes on a decision first, and that the verification window is a hard cap of 60 seconds. The maintainer accepted the four recommendations at the end on 2026-11-15; they are part of the Decision below.
 
 ## Context
 
@@ -31,10 +31,12 @@ Spike 0120 tested the mechanism on a software TPM, with a Tk stub for the prompt
 ## Decision
 
 1. **Presence is a gesture the session cannot synthesise:** a fingerprint match delivered through fprintd to the Agent, or the PIN typed into the prompt and checked by the TPM. When a sensor exists, the sensor decides; the prompt only displays and carries no decision. A click-only prompt exists only for policy classes with `prompt = "presence"` on a machine without a sensor, and the documentation says what it does not stop: any process of the same user can press it.
-2. **UV=1 only for a verification of this request, or within a window of at most 60 seconds** after a verification event, and only for a request that asks for UV. The 60 seconds are a **hard cap, a constant in the code**: policy may shorten it, never raise it. A click is never a verification. `getInfo` advertises `uv` only when it can be satisfied. "Session unlocked" no longer maps to UV.
+2. **UV=1 only for a verification of this request, or within a window of at most 60 seconds** after a verification event, and only for a request that asks for UV. The window counts only when presence is itself a gesture the session cannot synthesise; with click-only presence UV is per request or not offered. The 60 seconds are a **hard cap, a constant in the code**: policy may shorten it, never raise it. A click is never a verification. `getInfo` advertises `uv` only when it can be satisfied. "Session unlocked" no longer maps to UV.
 3. **The prompt process is confined:** its own AppArmor profile, not dumpable, no `ptrace`. It shows the relying-party id taken from the request and, for a choice, credential labels from the Credential Index, never other text from the client. The Agent accepts it only if it is the process the Agent expects, checked by its AppArmor label.
 4. **One prompt, one gesture and one signature per request.** A `getAssertion` with `up=false` is answered without the key (a well-formed response that does not verify, no counter increment), and the selection probes (`makeCredential` for `.dummy` and `make.me.blink`) are refused without a prompt. With several credentials the Prompt UI asks which one, so one signature is made; otherwise `numberOfCredentials` is not offered.
-5. **Names the tests will use** (each is a property in `docs/security/properties.md`, written in the code issues #173 to #176 after this ADR is accepted): `signature_without_a_sensor_gesture_is_refused_when_policy_requires_it`, `uv_flag_is_set_only_after_verification_for_this_request`, `repeated_assertion_for_one_ceremony_prompts_once`.
+5. **PIN prompt and `ptrace`.** Prefer the sensor; the PIN prompt remains for machines without one and the documentation says what it does not stop (an X11 client of the same user can observe it; Wayland is tested before 1.0). The prompt must be not dumpable; `ptrace_scope` 1 (the Ubuntu default) is documented as expected, not required; other distributions are tested later.
+6. **Authenticating the prompt in the user's session** is settled by a short spike before the confined-prompt issue ([#175](https://github.com/LinuxHello/linux-hello/issues/175)) is briefed.
+7. **Names the tests will use** (each is a property in `docs/security/properties.md`, written in the code issues #173 to #176 after this ADR is accepted): `signature_without_a_sensor_gesture_is_refused_when_policy_requires_it`, `uv_flag_is_set_only_after_verification_for_this_request`, `repeated_assertion_for_one_ceremony_prompts_once`.
 
 ## Consequences
 
@@ -49,12 +51,3 @@ Spike 0120 tested the mechanism on a software TPM, with a Tk stub for the prompt
 - Not tested: a hardware TPM, fprintd and a real sensor, the QML prompt, Flatpak browsers, Firefox as a `.deb`, a real relying party, other distributions.
 
 **Follow-up:** the four code issues [#173](https://github.com/LinuxHello/linux-hello/issues/173) (sensor gesture), [#174](https://github.com/LinuxHello/linux-hello/issues/174) (UV window), [#175](https://github.com/LinuxHello/linux-hello/issues/175) (confined prompt) and [#176](https://github.com/LinuxHello/linux-hello/issues/176) (one prompt per ceremony), unblocked when this ADR is accepted; the threat-model rows (actor M2, T5 "silent use") in the linux-hello repository change in the pull request that bumps the pin.
-
-## Open points for the maintainer
-
-Each has a recommendation; the Decision above stands as written unless you choose otherwise.
-
-1. **Does the window count when presence is a click?** Inside the window a click gives UV=1, and a synthetic click gives the same. *Recommendation:* count the window only when presence is a gesture the session cannot synthesise; with click-only presence UV is per request or not offered.
-2. **PIN prompt on X11.** *Recommendation:* prefer the sensor; keep the PIN for machines without one and document what it does not stop; test Wayland before 1.0.
-3. **`ptrace`.** AppArmor alone does not stop an unconfined tracer of the same user; not-dumpable and Yama do. *Recommendation:* require not-dumpable in the prompt, document `ptrace_scope` 1 (the Ubuntu default) as expected but not required; test other distributions later.
-4. **What authenticates the prompt when it runs in the user's session.** *Recommendation:* a short spike before the confined-prompt issue (#175) is briefed.
