@@ -18,7 +18,7 @@ A section marked **gap** has no content yet; nothing has been invented to fill i
 
 | Arc42 section | Note | State |
 | :-- | :-- | :-- |
-| 1. Introduction and goals | [01-introduction-and-goals.md](01-introduction-and-goals.md) | Requirements overview; quality goals and stakeholders are gaps |
+| 1. Introduction and goals | [01-introduction-and-goals.md](01-introduction-and-goals.md) | Requirements overview and ranked quality goals; stakeholders are a gap |
 | 2. Constraints | [02-constraints.md](02-constraints.md) | Written |
 | 3. Context and scope | [03-context-and-scope.md](03-context-and-scope.md) | Business context: C4 `Context` view; technical context is a gap |
 | 4. Solution strategy | [04-solution-strategy.md](04-solution-strategy.md) | Written |
