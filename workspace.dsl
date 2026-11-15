@@ -20,7 +20,8 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
                 pinManager = component "PIN Manager" "Change PIN in place, PIN rules, lockout status (UX7b)" "Rust"
                 enrolment = component "Enrolment Orchestrator" "First-run PIN, root key creation, second-credential prompts (UX8)" "Rust"
                 methodOrch = component "Method Orchestrator" "Runs face, fingerprint and PIN in parallel for a prompt the PAM module opened; first success wins; cancels the rest (UX3); runs fingerprint and Howdy itself (ADR-0023)" "Rust, async"
-                pinVerifier = component "PIN Verifier" "Satisfies TPM2 auth on the root key; TPM anti-hammering applies" "Rust"
+                pinSocket = component "PIN Socket" "Dedicated unix stream socket of the Agent in a directory only the Agent's user can change; reads the caller's uid and pid with SO_PEERCRED and accepts the PIN only for the subject user the control call on the bus named; carries the PIN and nothing else, never as a D-Bus message body (ADR-0021)" "Rust, unix socket"
+                pinVerifier = component "PIN Verifier" "Stretches the PIN (per-user salt, slow key derivation) and satisfies TPM2 auth on the root key through a salted HMAC session with parameter encryption; only the Agent talks to the TPM; the Agent's per-user counter throttles before the TPM's anti-hammering applies; every PIN buffer is zeroized (ADR-0021)" "Rust"
                 faceClient = component "Face Client" "Requests a face match from Howdy" "Rust"
                 fingerClient = component "Fingerprint Client" "Requests a verify from fprintd" "zbus"
                 resetCoord = component "Reset Coordinator" "Destructive reset per ADR-0003 (LH-1)" "Rust"
@@ -29,7 +30,7 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
 
             pamModule = container "pam_linuxhello" "Thin synchronous PAM client of the Agent: opens the prompt, waits with a hard deadline and maps the answer to a PAM code (ADR-0023)" "Rust cdylib, Linux-PAM" {
                 pamEntry = component "PAM Entry Points" "pam_sm_authenticate and pam_sm_open_session" "Rust FFI"
-                agentClient = component "Agent Client" "Opens the prompt and hands the conversation to the Agent's orchestrator over the system bus; connects within 250 ms and waits within the policy deadline; returns PAM_AUTHINFO_UNAVAIL when Linux Hello is unavailable and never PAM_SUCCESS for that case (P-20); starts no thread, executor or subprocess in the host process (ADR-0023)" "Rust, synchronous zbus"
+                agentClient = component "Agent Client" "Opens the prompt and hands the conversation to the Agent's orchestrator over the system bus; connects within 250 ms and waits within the policy deadline; sends the PIN to the Agent's PIN socket, never as a D-Bus message; returns PAM_AUTHINFO_UNAVAIL when Linux Hello is unavailable and never PAM_SUCCESS for that case (P-20); starts no thread, executor or subprocess in the host process (ADR-0023)" "Rust, synchronous zbus"
             }
 
             tpmProvider = container "TPM Credential Provider" "Device-bound passkeys under the per-user TPM root key" "Rust daemon" {
@@ -135,6 +136,8 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
         # PAM module
         linuxPam -> pamEntry "Loads module" "PAM stack"
         pamEntry -> agentClient "Authenticate"
+        agentClient -> pinSocket "Sends the PIN to the Agent, nothing else (ADR-0021)" "Unix socket, SO_PEERCRED"
+        pinSocket -> methodOrch "PIN for the prompt"
         agentClient -> dbusApi "Opens the prompt and hands over the conversation; connect limit 250 ms, PAM_AUTHINFO_UNAVAIL on any failure (ADR-0023)" "D-Bus"
         dbusApi -> methodOrch "Runs the conversation for the prompt"
         methodOrch -> pinVerifier "PIN path"
