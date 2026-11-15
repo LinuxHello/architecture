@@ -12,16 +12,19 @@ CHECK = Path(__file__).resolve().parent / "check-docs.py"
 FRONT = ('---\ntype: note\nsubject: s\nartifact: note\nstatus: active\nowner: "@o"\n'
          'concepts: []\ntags: []\nsources: []\ndate: 2026-11-05\n---\n\n')
 failed = 0
+total = 0
 
 
 def run(name, body, want_exit, want_text="", extra=None):
     """Write one note with `body` (and `extra` files), run the check, compare."""
-    global failed
+    global failed, total
+    total += 1
     with tempfile.TemporaryDirectory() as d:
         root = Path(d)
         (root / "note.md").write_text(body)
         (root / "other.md").write_text(FRONT + "# Other\n")
         for path, text in (extra or {}).items():
+            (root / path).parent.mkdir(parents=True, exist_ok=True)
             (root / path).write_text(text)
         r = subprocess.run([sys.executable, "-I", str(CHECK), d], capture_output=True, text=True)
         ok = r.returncode == want_exit and want_text in r.stdout
@@ -44,5 +47,10 @@ run("link_in_inline_code_is_ignored", FRONT + "Write `[x](missing.md)` like this
 run("text_after_inline_code_is_still_checked", FRONT + "Use `x`, see [[other]].\n", 1, "wikilink")
 run("url_links_are_not_checked", FRONT + "See [x](https://example.org/missing.md).\n", 0)
 
-print(f"{12 - failed} passed, {failed} failed")
+run("credentialsd_without_the_decision_is_refused", FRONT + "Passkeys go through credentialsd.\n", 1, "names credentialsd")
+run("credentialsd_with_its_adr_is_allowed", FRONT + "credentialsd is not used (ADR-0005).\n", 0)
+run("credentialsd_with_a_spike_is_allowed", FRONT + "The credentialsd provider API: spike 0005.\n", 0)
+run("credentialsd_in_an_adr_is_allowed", FRONT, 0, extra={"adr/0001-x.md": FRONT + "We compared credentialsd.\n"})
+
+print(f"{total - failed} passed, {failed} failed")
 sys.exit(1 if failed else 0)
