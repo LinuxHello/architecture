@@ -132,13 +132,14 @@ At every prompt the user can see which method is active, switch to another, and 
 
 ### Design consequence
 
-A PAM conversation is text only, so a greeter cannot tell which method is running. Linux Hello therefore adds a side channel: `pam_linuxhello` runs fprintd and Howdy concurrently itself (instead of stacking `pam_fprintd` and `pam_howdy`) and publishes the live state on the Agent's D-Bus API (`MethodsAvailable`, `ActiveMethod`, `State`, `Result`). The login manager and the Prompt UI render from that one state through a shared QML component; the lock screen shows the text of KDE's own Face and Fingerprint PAM services on Plasma 6.8 and later ([ADR-0016](../adr/0016-prompt-hosts.md)). The state is served by the Agent on the system bus, per uid, by method reply or unicast signal and never broadcast ([ADR-0014](../adr/0014-agent-bus.md)); every prompt has an opaque identifier that the PAM module and the component both derive, because the PAM conversation is text only.
+A PAM conversation is text only, so a greeter cannot tell which method is running. Linux Hello therefore adds a side channel: the Agent runs fprintd and Howdy concurrently in its method orchestrator (instead of stacking `pam_fprintd` and `pam_howdy`), on behalf of a prompt that `pam_linuxhello` opens, and publishes the live state on its D-Bus API (`MethodsAvailable`, `ActiveMethod`, `State`, `Result`). The login manager and the Prompt UI render from that one state through a shared QML component; the lock screen shows the text of KDE's own Face and Fingerprint PAM services on Plasma 6.8 and later ([ADR-0016](../adr/0016-prompt-hosts.md)). The state is served by the Agent on the system bus, per uid, by method reply or unicast signal and never broadcast ([ADR-0014](../adr/0014-agent-bus.md)); every prompt has an opaque identifier that the PAM module and the component both derive, because the PAM conversation is text only.
 
 ### Additions to the C4 model
 
 | Container | New component | Role |
 | :-- | :-- | :-- |
-| `pam_linuxhello` | Method Orchestrator | Runs face, fingerprint and PIN in parallel; first success wins; cancels the rest |
+| Linux Hello Agent | Method Orchestrator | Runs face, fingerprint and PIN in parallel; first success wins; cancels the rest ([ADR-0023](../adr/0023-pam-module-and-login-failure.md): moved here from the PAM module) |
+| `pam_linuxhello` | Agent Client | Opens the prompt, hands the conversation to the orchestrator over the system bus, waits with a deadline, maps the answer to a PAM code |
 | Linux Hello Agent | Auth State Publisher | D-Bus signals for method, state and result per prompt |
 | Plasma Integration | Auth Prompt QML Component | Shared method indicator and switcher for the greeter, lock screen and Prompt UI |
 | Plasma Integration | Face Enrolment Module | Guided text, recognition test and delete; calls Howdy through the Agent's privileged helper; no live preview in 1.0 |
@@ -156,7 +157,7 @@ The Routing Policy Engine in the Agent answers one question before every credent
 
 | Caller | Asks | Gets back |
 | :-- | :-- | :-- |
-| `pam_linuxhello` | Allowed methods for context `login`, `unlock`, `sudo`, … | Method set, factor count |
+| Method Orchestrator (in the Agent; the PAM module only opens the prompt, [ADR-0023](../adr/0023-pam-module-and-login-failure.md)) | Allowed methods for context `login`, `unlock`, `sudo`, … | Method set, factor count |
 | TPM Provider / KeePassXC Bridge | Decision for relying party + operation (create, get) + verified caller app ID | Provider, prompt level (none, presence, re-verify), factors |
 | Prompt UI / Auth Prompt | Which methods to offer and switch between | Method list, locked options |
 | PIN Manager | PIN rules | Complexity rules, lockout threshold |
