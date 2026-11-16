@@ -139,6 +139,7 @@ A PAM conversation is text only, so a greeter cannot tell which method is runnin
 | Container | New component | Role |
 | :-- | :-- | :-- |
 | Linux Hello Agent | Method Orchestrator | Runs face, fingerprint and PIN in parallel; first success wins; cancels the rest ([ADR-0023](../adr/0023-pam-module-and-login-failure.md): moved here from the PAM module) |
+| Linux Hello Agent | PIN Socket | Dedicated unix socket; the caller is checked with `SO_PEERCRED`; the PIN is accepted only for the subject user the control call named; never a D-Bus message body ([ADR-0021](../adr/0021-pin-transport.md)) |
 | `pam_linuxhello` | Agent Client | Opens the prompt, hands the conversation to the orchestrator over the system bus, waits with a deadline, maps the answer to a PAM code |
 | Linux Hello Agent | Auth State Publisher | D-Bus signals for method, state and result per prompt |
 | Plasma Integration | Auth Prompt QML Component | Shared method indicator and switcher for the greeter, lock screen and Prompt UI |

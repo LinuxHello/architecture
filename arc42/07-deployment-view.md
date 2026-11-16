@@ -40,6 +40,10 @@ The Agent is one systemd system service for all users on the system bus ([ADR-00
 - It **fails closed**: `ExecStartPre` demands that the profile is loaded in enforce mode, so the unit does not start with the profile in complain mode or not loaded.
 - Two independent layers decide who may do what on the bus: the bus policy (only the Agent's user owns the name or sends its signals; any user calls its interface; its properties and every other interface are denied) and AppArmor (the Agent's own permissions).
 
+### The PIN socket (not deployed yet)
+
+[ADR-0021](../adr/0021-pin-transport.md) adds a second endpoint to the Agent: a dedicated unix stream socket that carries the PIN from the PAM module and nothing else. It is not in the unit yet. When it is, the deployment gets: the socket in a directory only the Agent's user can change (path and mode fixed in the code issue), a rule for it in the AppArmor profile, an entry in the unit's socket family list (`AF_UNIX` is already the only family allowed), and a test that a process of another user cannot connect usefully. The bus and the socket are then the Agent's only two endpoints; the model's deployment view will show the socket when the unit has it.
+
 ## 7.3 What has been tested
 
 The files were installed as above in a test VM and exercised on a real system bus with real users, on **Ubuntu 24.04** (kernel 6.8) and **Ubuntu 26.04** (kernel 7.0, AppArmor 5, systemd 259). Each run makes 22 checks and all passed on both: the unit starts only with the profile enforcing and refuses to start otherwise; the name is owned by the Agent's user, which runs confined; any user reaches the methods and nobody reads the properties; another user is refused on a prompt it did not open and cannot take the name; a subscriber hears the Agent's signal, a bystander and two forgers cause nothing; the profile denies what it does not grant; AppArmor denies nothing the Agent needs. The systemd exposure score is 0.5 (SAFE). The run is a script in the maintainer's workstation repository, by hand, not a CI job.
