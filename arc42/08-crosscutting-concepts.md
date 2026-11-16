@@ -179,7 +179,7 @@ Most restrictive wins when two admin files conflict. The engine fails closed: a 
 | PIN | `min_length`, `max_length` | Minimum / Maximum PIN length |
 | PIN | `digits`, `lowercase`, `uppercase`, `special` (`required` / `allowed` / `disallowed`) | Digits, Lowercase, Uppercase, Special characters |
 | PIN | `history`, `expiry_days` | History, Expiration |
-| PIN | `lockout_attempts`, `lockout_minutes` (TPM dictionary-attack parameters) | TPM anti-hammering |
+| PIN | `lockout_attempts`, `lockout_minutes` (settings of the Agent's own per-user counter; the TPM's dictionary-attack parameters are never changed) | TPM anti-hammering |
 | Methods | `biometrics_allowed` | Allow use of biometrics |
 | Methods | `face_requires_ir` (anti-spoofing) | Enhanced anti-spoofing |
 | Methods | `require_hardware_tpm` | Use a hardware security device |
