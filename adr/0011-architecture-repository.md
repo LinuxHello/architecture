@@ -32,7 +32,7 @@ Three couplings constrain a split:
 
 ## Decision
 
-### A new repository: `LinuxHello/architecture`
+### A new repository: `LinuxHello/linux-hello-architecture`
 
 Public, with the same licence as the content it receives (LGPL-3.0-or-later, [ADR-0002](0002-licence-lgpl-3-or-later.md)); moving the files does not relicense them. It is the Obsidian vault for the architecture, with the frontmatter, link and Mermaid rules of AGENTS.md.
 
@@ -64,14 +64,14 @@ No Rust gates. Required checks: DCO, frontmatter on every note, relative links r
 
 ### How the rules in AGENTS.md change
 
-- **Source of truth.** Items 2 and 3 become the accepted ADRs and the Arc42 notes and `workspace.dsl` in `LinuxHello/architecture`, at the commit `linux-hello` pins.
+- **Source of truth.** Items 2 and 3 become the accepted ADRs and the Arc42 notes and `workspace.dsl` in `LinuxHello/linux-hello-architecture`, at the commit `linux-hello` pins.
 - **Docs change with code** becomes: a behaviour change that alters a container, component, interface or decision has an `architecture` pull request; the `linux-hello` pull request links it. The architecture pull request merges first, and the code pull request bumps the pin. A change inside a component updates only doc comments, in the same pull request as the code.
 - **Briefs** already quote constraints rather than reference them, so an implementer still needs only the brief.
 - **Issues** stay in `linux-hello` for now, so `make next` and `make backlog-check` keep one backlog. An issue whose work lands in `architecture` carries `type:docs` or `type:spike`, and its pull request goes to the repository that holds the files.
 
 ### Implementation, as separate issues
 
-1. Create `LinuxHello/architecture` with branch rules, DCO and the Claude GitHub App installed (maintainer: organisation and repository settings).
+1. Create `LinuxHello/linux-hello-architecture` with branch rules, DCO and the Claude GitHub App installed (maintainer: organisation and repository settings).
 2. Move the files with their history (`git filter-repo` on a copy, then push), add the checks above.
 3. In `linux-hello`: add the submodule, repoint `c4-docs.sh`, `test-c4-docs.sh` and the crate-root links, add the stubs, enable Dependabot for the submodule, check out submodules in CI.
 4. Update AGENTS.md, CONTRIBUTING.md, GOVERNANCE.md, README.md, SECURITY.md, the pull request template and the Copilot instructions.
