@@ -14,7 +14,7 @@ date: 2026-11-08
 
 ## Status
 
-Accepted, 2026-11-08, on the maintainer's decision the same day (proposed 2026-11-08).
+Accepted, 2026-11-08, on the maintainer's decision the same day (proposed 2026-11-08). Amendment accepted 2026-11-16, on the maintainer's decision the same day: what identifies a caller (see *Amendment 2026-11-16*); it changes the *Policy* point and is the answer to [linux-hello#162](https://github.com/LinuxHello/linux-hello/issues/162).
 
 ## Context
 
@@ -38,6 +38,22 @@ Constraints from the model ([workspace.dsl](../workspace.dsl)): the PAM module a
 - **Other containers.** The TPM provider, the KeePassXC bridge and the `uhid` helper reach the Agent on the same bus. `linuxhello-ctl` and the settings module call it there too.
 - **Confinement.** The unit uses the sandbox in [section 8](../arc42/08-crosscutting-concepts.md#security-hardening) and an enforce-mode AppArmor profile; `DeviceAllow` for `/dev/tpmrm0` stays the only device.
 
+### Amendment 2026-11-16: the Agent tells callers apart by uid and connection, not by process
+
+The *Policy* point above says the Agent decides from the caller's uid, pid and AppArmor label. **It reads the uid and the connection's unique bus name, and decides on nothing else.** The pid and the label are not used. In particular the Agent does not try to tell `pam_linuxhello` from any other process of the same uid: the module runs inside `sudo`, the greeter helper and the lock screen, so no label or pid names "the PAM module", only its host process, and a host that runs as the user is the user's own to trust (M2 in the [threat model](https://github.com/LinuxHello/linux-hello/blob/main/docs/security/threat-model.md)).
+
+What the Agent enforces on the prompt calls:
+
+- Only root, or the user the prompt is for, may open a prompt for that user.
+- A prompt belongs to the uid it was opened for and is named by its identifier. A caller of another uid cannot read, report on, replace or close it.
+- An open prompt is replaced only by the connection that opened it; another connection of the same uid is refused ([linux-hello#204](https://github.com/LinuxHello/linux-hello/issues/204)). Reporting, closing and subscribing are not tied to the connection.
+- A reader gets only its own uid's prompts, and signals are unicast to the peer that subscribed.
+- A prompt dies with its opener's connection and after five minutes without a report.
+
+What a process of the same user can therefore do: open prompts for itself (within the per-user limit); report on, close or subscribe to any prompt of its uid whose identifier it knows, and the identifier is one the PAM module and the prompt component derive, so it can be derived; and take an identifier before the PAM module does. The indicator then shows a wrong state or none. It cannot read or change another user's prompt, and it cannot change the result of an authentication, because the PIN and the biometric checks are made by the Agent itself ([ADR-0023](0023-pam-module-and-login-failure.md)) and never by a state a client reports. **The indicator is for the user's eyes and carries no authority; nothing may decide from it.**
+
+If a later decision needs to tell the module from other processes of one uid (for example a helper with its own uid at the lock screen), that is a new amendment; this one only records that none is enforced.
+
 The user-visible Plasma pieces (Prompt UI, settings page) stay in the user's session and call the Agent over the system bus. Nothing here changes the interface name or version.
 
 ## Consequences
@@ -49,5 +65,9 @@ The user-visible Plasma pieces (Prompt UI, settings page) stay in the user's ses
 - The Agent is a system service. A flaw in caller checking or in per-uid separation exposes other users' state. Each separation rule needs a security property and a test named after it before code ([AGENTS.md](https://github.com/LinuxHello/linux-hello/blob/main/AGENTS.md)).
 - Per-user data (root-key blobs, user policy) is read and written by a service that is not the user: the layout of `/var/lib/linuxhello/` and the ownership of the user policy file need their own decisions.
 - [Section 5](../arc42/05-building-block-view.md) and [section 7](../arc42/07-deployment-view.md) state the bus as "session" and as a gap; they follow this ADR once accepted.
+
+**Easier (amendment):** the Agent has one rule for every caller and nothing to enrol or label; P-04 and the module docs say what holds and nothing more.
+
+**Harder (amendment):** the lock screen's indicator can be wrong or missing when a process of the same user interferes, and the interface must never show it as proof of anything; a future helper with its own uid would need its own amendment.
 
 Follow-ups: the signal and method schema with the prompt identifier in `linuxhello-dbus`; the bus policy file; a test VM run of the PAM module against the service in the four contexts.
