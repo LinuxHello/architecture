@@ -15,7 +15,7 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
             agent = container "Linux Hello Agent" "Unlock state, auth state, routing policy, PIN, enrolment and reset orchestration" "Rust daemon, systemd system service, D-Bus on the system bus (ADR-0014)" {
                 dbusApi = component "D-Bus API" "io.github.LinuxHello.Agent1 on the system bus; verifies peer credentials of every caller, keeps state per uid and sends it by method reply or unicast signal, never a broadcast that names a user or a method (ADR-0014)" "zbus"
                 unlockState = component "Unlock State Manager" "Session unlock, expiry and re-prompt rules; state proven by TPM policy sessions, not flags" "Rust"
-                authState = component "Auth State Publisher" "Signals MethodsAvailable, ActiveMethod, State, Result per prompt (UX1-UX4)" "zbus signals"
+                authState = component "Auth State Publisher" "Signals MethodsAvailable, ActiveMethod, State, Result per prompt (UX1-UX4) and Closed when a prompt closes" "zbus signals"
                 policyEngine = component "Routing Policy Engine" "Merges default, user and admin layers; answers allowed methods per context, provider and prompt level per relying party, PIN rules; fails closed on unparseable policy" "Rust"
                 pinManager = component "PIN Manager" "Change PIN in place, PIN rules, lockout status (UX7b)" "Rust"
                 enrolment = component "Enrolment Orchestrator" "First-run PIN, root key creation, second-credential prompts (UX8)" "Rust"
