@@ -14,7 +14,7 @@ date: 2026-11-08
 
 Part of the [Arc42 architecture documentation](README.md). C4 diagrams are defined only in [workspace.dsl](../workspace.dsl) ([ADR-0008](../adr/0008-code-documentation-mapped-to-c4.md)); the images here are rendered from it and are never edited ([how](../diagrams/README.md)). The code names the container or component it implements, and CI checks it against the workspace.
 
-Levels: System Context ([section 3](03-context-and-scope.md)), Container, and one Component view per container. Code level deferred until a Rust skeleton exists. DSL **untested**: validate with the Structurizr CLI before committing.
+Levels: System Context ([section 3](03-context-and-scope.md)), Container, and one Component view per container. The code level is the doc comments of the code, each naming its C4 element ([ADR-0008](../adr/0008-code-documentation-mapped-to-c4.md); linux-hello checks it with `scripts/ci/c4-docs.sh`), not class diagrams. The `dsl` check of this repository parses `workspace.dsl` and `scripts/render-diagrams.sh` renders the views.
 
 ## 5.1 Level 1: containers
 
@@ -97,4 +97,4 @@ The components that the user-experience design adds are listed in [section 8, Ad
 
 ## 5.3 Level 3: code
 
-Code level (class diagrams): deferred until the Rust skeleton exists; first candidates are the Routing Policy Engine and the TPM Key Service. Until then every item carries a doc comment ([ADR-0008](../adr/0008-code-documentation-mapped-to-c4.md)).
+Code level (class diagrams): not drawn; every item carries a doc comment that names its C4 element ([ADR-0008](../adr/0008-code-documentation-mapped-to-c4.md)). First candidates, if class diagrams are wanted, are the Routing Policy Engine and the TPM Key Service.

@@ -6,6 +6,9 @@
 2. Every relative Markdown link and every relative frontmatter source resolves to a
    file or directory in this repository. Anchors and URLs are not checked.
 3. No note uses an Obsidian [[wikilink]].
+4. Outside adr/, spikes/ and templates/, a line of text that names credentialsd also names
+   ADR-0005 or a spike: Linux Hello does not build on credentialsd (ADR-0005), so a note that
+   mentions it is history or prior art and says where the decision is.
 
 Code blocks and inline code are examples, not links: they are not checked.
 
@@ -56,6 +59,12 @@ for note in notes:
         check_target(note, target, "link")
     if re.search(r"\[\[[^\]]+\]\]", body):
         fail(note, "uses a [[wikilink]]; use a relative Markdown link")
+    if rel.parts[0] not in ("adr", "spikes", "templates"):
+        text_only = re.sub(r"^---\n.*?\n---\n", "", text, count=1, flags=re.S)
+        for number, line in enumerate(text_only.splitlines(), 1):
+            low = line.lower()
+            if "credentialsd" in low and "adr-0005" not in low and "spike" not in low:
+                fail(note, f"text line {number} names credentialsd without ADR-0005 or a spike (ADR-0005: not used)")
 
 for f in failures:
     print(f"::error::{f}")

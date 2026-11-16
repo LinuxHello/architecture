@@ -70,7 +70,7 @@ Rust, matching the TPM (`tss-esapi`), D-Bus (`zbus`) and CTAP libraries we use. 
 **AppArmor (mandatory).** One profile per daemon and for `linuxhello-ctl`, shipped in **enforce** mode.
 
 - Only the TPM Provider and the Agent may open `/dev/tpmrm0`; only the Face Client path may reach Howdy; only Howdy, started by the Agent's helper, may open the camera; only the `uhid` helper may open `/dev/uhid`.
-- Policy files: admin layer read-only for every profile; user layer writable only by the Settings Module.
+- Policy files: admin layer read-only for every profile; the user layer is kept by the Agent in its state directory and set over D-Bus ([ADR-0018](../adr/0018-user-policy-layer.md)), so no other container's profile writes it.
 - Deny `ptrace` and `/proc/<pid>/mem` access to the Agent and providers.
 - CI loads every profile (`apparmor_parser`), runs the property tests under them, and fails on any `DENIED` line or on a profile left in complain mode.
 
