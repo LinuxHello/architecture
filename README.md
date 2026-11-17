@@ -38,7 +38,7 @@ The repository is an Obsidian vault; its settings (`.obsidian/`) are not tracked
 
 ## Contributing
 
-The rules of `linux-hello`'s [AGENTS.md](https://github.com/LinuxHello/linux-hello/blob/main/AGENTS.md) and [CONTRIBUTING.md](https://github.com/LinuxHello/linux-hello/blob/main/CONTRIBUTING.md) apply: changes reach `main` by pull request and squash merge, every commit is signed off (`git commit -s`, [DCO](https://developercertificate.org/)), and no secrets, personal data or machine details go into this public repository.
+Notes are written so that a reader who is new to the subject can follow them; [AGENTS.md](AGENTS.md) says how, for people and for coding agents alike. The rules of `linux-hello`'s [AGENTS.md](https://github.com/LinuxHello/linux-hello/blob/main/AGENTS.md) and [CONTRIBUTING.md](https://github.com/LinuxHello/linux-hello/blob/main/CONTRIBUTING.md) apply: changes reach `main` by pull request and squash merge, every commit is signed off (`git commit -s`, [DCO](https://developercertificate.org/)), and no secrets, personal data or machine details go into this public repository.
 
 ## Licence
 

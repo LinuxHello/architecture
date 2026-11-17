@@ -2,7 +2,8 @@
 """Check the notes of this repository (ADR-0011, the rules of linux-hello's AGENTS.md):
 
 1. Every note has frontmatter with the keys type, subject, artifact, status, owner,
-   concepts, tags, sources and date. Templates, the root README and LICENSE are exempt.
+   concepts, tags, sources and date. Templates, the root README, AGENTS.md and CLAUDE.md, and
+   LICENSE are exempt.
 2. Every relative Markdown link and every relative frontmatter source resolves to a
    file or directory in this repository. Anchors and URLs are not checked.
 3. No note uses an Obsidian [[wikilink]].
@@ -40,7 +41,7 @@ notes = sorted(p for p in root.rglob("*.md")
 for note in notes:
     rel = note.relative_to(root)
     text = note.read_text(encoding="utf-8")
-    exempt = rel.parts[0] == "templates" or rel == Path("README.md")
+    exempt = rel.parts[0] == "templates" or rel in (Path("README.md"), Path("AGENTS.md"), Path("CLAUDE.md"))
     if not exempt:
         m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
         if not m:

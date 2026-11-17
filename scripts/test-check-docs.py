@@ -45,6 +45,8 @@ run("wikilink_in_double_backtick_code_is_allowed", FRONT + "Write ``[[x]] `y` ``
 run("link_in_code_block_is_ignored", FRONT + "```md\n[x](missing.md) [[y]]\n```\n", 0)
 run("link_in_inline_code_is_ignored", FRONT + "Write `[x](missing.md)` like this.\n", 0)
 run("text_after_inline_code_is_still_checked", FRONT + "Use `x`, see [[other]].\n", 1, "wikilink")
+run("agent_rule_files_need_no_frontmatter", FRONT, 0, extra={"AGENTS.md": "# Rules\n", "CLAUDE.md": "@AGENTS.md\n"})
+run("links_in_agent_rule_files_are_still_checked", FRONT, 1, "link missing.md", extra={"AGENTS.md": "See [x](missing.md).\n"})
 run("url_links_are_not_checked", FRONT + "See [x](https://example.org/missing.md).\n", 0)
 
 run("credentialsd_without_the_decision_is_refused", FRONT + "Passkeys go through credentialsd.\n", 1, "names credentialsd")
