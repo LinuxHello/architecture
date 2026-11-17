@@ -22,7 +22,7 @@ A section marked **gap** has no content yet; nothing has been invented to fill i
 | :-- | :-- | :-- |
 | 1. Introduction and goals | [01-introduction-and-goals.md](01-introduction-and-goals.md) | Written: Linux Hello in five minutes and what works today, the main requirements, ranked quality goals, stakeholders. Start here |
 | 2. Constraints | [02-constraints.md](02-constraints.md) | Written |
-| 3. Context and scope | [03-context-and-scope.md](03-context-and-scope.md) | Business context: C4 `Context` view; technical context is a gap |
+| 3. Context and scope | [03-context-and-scope.md](03-context-and-scope.md) | Written: the people and the outside programs Linux Hello uses, what for and whether each is needed; the channel to each and whether it is built; what is not in scope |
 | 4. Solution strategy | [04-solution-strategy.md](04-solution-strategy.md) | Written |
 | 5. Building block view | [05-building-block-view.md](05-building-block-view.md) | Written: the ten parts of Linux Hello and the pieces inside each, what each does and why it is separate, and which are built |
 | 6. Runtime view | [06-runtime-view.md](06-runtime-view.md) | Written: four walkthroughs with sequence diagrams (signing in with a fingerprint, signing in when Linux Hello is not working, a passkey on a website, resetting a forgotten PIN), each saying what is built |

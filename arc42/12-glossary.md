@@ -284,6 +284,10 @@ The Linux service that sets up device files when a device appears, and decides w
 
 The number Linux uses for a user account. The Agent serves all users of the machine and keeps their data apart by uid.
 
+### V4L2, Video4Linux
+
+The kernel's interface to cameras: each camera appears as one or more device files, `/dev/video0` and so on. Howdy reads the infrared camera through it; Linux Hello itself never opens a camera ([spike 0012](../spikes/0012-camera-rgb-ir-concurrent.md)).
+
 ### Wayland, X11
 
 The two systems that put windows on a Linux screen. Under X11 any program of the user can read the keys typed into another window; under Wayland it cannot. A PIN typed under X11 can therefore be observed by another program of the same user, which Linux Hello documents and does not prevent ([ADR-0020](../adr/0020-presence-and-verification.md)).
