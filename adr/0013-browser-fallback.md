@@ -18,7 +18,7 @@ Proposed, 2026-11-07. Superseded by [ADR-0017](0017-browser-path.md) (accepted, 
 
 ## Context
 
-No stock browser sends WebAuthn requests to the credentials portal or to credentialsd ([spike 0006](../spikes/0006-browser-webauthn-portal.md)). The Firefox source has no Linux platform authenticator; Chromium creates platform discoveries only for macOS and ChromeOS. So 1.0 needs a browser path that does not depend on the browser, and design rule 4 ("one path for all clients", [section 4](../arc42/04-solution-strategy.md#design-rules)) does not hold for browsers until they call the portal.
+No stock browser sends WebAuthn requests to the credentials portal or to credentialsd ([spike 0006](../spikes/0006-browser-webauthn-portal.md)). The Firefox source has no Linux platform authenticator; Chromium creates platform discoveries only for macOS and ChromeOS. So 1.0 needs a browser path that does not depend on the browser, and design rule 4 ("one path for all clients", [section 4](../arc42/04-solution-strategy.md#43-design-rules)) does not hold for browsers until they call the portal.
 
 [ADR-0005](0005-provider-path.md) (option D) gives Linux Hello its own broker in front of the TPM provider and the KeePassXC bridge. A browser path has to reach that broker without breaking the "Caller impersonation" threat in [section 8](../arc42/08-crosscutting-concepts.md#threats-to-design-against): "never trust a caller-supplied origin from an unprivileged client".
 
@@ -75,5 +75,5 @@ The native-messaging host name is a one-way door (invariant 7). It is chosen wit
 Follow-up, before this ADR is accepted:
 
 - `workspace.dsl` and [section 5](../arc42/05-building-block-view.md): add the extension and host containers and the `browsers -> extension -> host -> broker` relations.
-- [Section 4](../arc42/04-solution-strategy.md#design-rules), design rule 4, and [section 8](../arc42/08-crosscutting-concepts.md#threats-to-design-against): name this ADR as the browser exception and the origin chain as the "Caller impersonation" mitigation for browsers.
+- [Section 4](../arc42/04-solution-strategy.md#43-design-rules), design rule 4, and [section 8](../arc42/08-crosscutting-concepts.md#threats-to-design-against): name this ADR as the browser exception and the origin chain as the "Caller impersonation" mitigation for browsers.
 - The hands-on part of spike 0033 confirms the unconfined rows of the support table.

@@ -27,7 +27,7 @@ The user-experience questions (Howdy's interfaces, third-party prompts, the User
 
 ## Risk register and technical debt
 
-The risks found by the spikes are rated in words from the evidence in each spike. The risks recorded as issues in the code repository carry the severity given in the issue. The list is not complete: the consequences in [section 4](04-solution-strategy.md#consequences) and the threats in [section 8](08-crosscutting-concepts.md#threats-to-design-against) are further inputs.
+The risks found by the spikes are rated in words from the evidence in each spike. The risks recorded as issues in the code repository carry the severity given in the issue. The list is not complete: the consequences in [section 4](04-solution-strategy.md#46-what-this-strategy-makes-easier-and-harder) and the threats in [section 8](08-crosscutting-concepts.md#threats-to-design-against) are further inputs.
 
 | Risk | Source | Rating | Mitigation or next step |
 | :-- | :-- | :-- | :-- |
