@@ -16,8 +16,8 @@ Part of the [Arc42 architecture documentation](README.md).
 
 ## User journeys
 
-1. **Session login.** Face or fingerprint at the Plasma login manager or lock screen → PAM unlocks the session and the Agent together; PIN on failure.
-2. **Passkey sign-in in a browser.** Site calls WebAuthn → the browser talks CTAP2 to the Virtual CTAP Authenticator, which looks like a USB security key → routing policy picks TPM or KeePassXC → signed silently, or after one touch for high-value relying parties.
+1. **Session login.** At the login screen, the lock screen or `sudo`, the PAM module `pam_linuxhello` asks the Agent, which runs the face, the fingerprint and the PIN at the same time; the first match wins. If Linux Hello is unavailable, the module answers `PAM_AUTHINFO_UNAVAIL` and the account password still works; a login by password leaves the TPM keys locked ([ADR-0023](../adr/0023-pam-module-and-login-failure.md)).
+2. **Passkey sign-in in a browser.** Site calls WebAuthn → the browser talks CTAP2 to the Virtual CTAP Authenticator, which looks like a USB security key → routing policy picks TPM or KeePassXC → the Prompt UI asks for a gesture another program cannot fake (a fingerprint, or the PIN) for every request, and the key signs once. The website is told the user was verified only if the check was made for this request or at most 60 seconds before it ([ADR-0020](../adr/0020-presence-and-verification.md)). Nothing is signed silently.
 3. **Native app re-auth (Claude Desktop).** Token expires → browser OAuth login → passkey assertion after one fingerprint → token stored in the Secret Service. Target: DBSC makes this invisible.
 4. **Passkey enrolment.** Site offers passkey creation → policy, or the user, chooses device-bound (TPM) or portable (KeePassXC) → prompt to register a second credential for high-value accounts.
 5. **Reset.** PIN forgotten or TPM cleared → account or admin password → root key and TPM-bound passkeys wiped → new PIN enrolled → user re-registers with each relying party, using the second credential or the service's account recovery.

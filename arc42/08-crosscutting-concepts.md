@@ -24,7 +24,7 @@ The PIN is the root, biometrics are a shortcut, and the account password is a de
 | Tier | Linux Hello | Windows Hello parallel |
 | :-- | :-- | :-- |
 | Root | PIN = TPM2 authorisation on a per-user root key; every passkey key hangs off it; TPM anti-hammering limits guessing; PIN never leaves the device | PIN unlocks the TPM-protected Windows Hello container; TPM anti-hammering |
-| Shortcut | fprintd / Howdy satisfy a TPM policy for the session; never the root; failure falls back to PIN | Windows Biometric Framework, templates local only; a match releases the container |
+| Shortcut | fprintd / Howdy confirm the user instead of the PIN; never the root; failure falls back to PIN. How a match is tied to the TPM is open ([linux-hello#136](https://github.com/LinuxHello/linux-hello/issues/136)) | Windows Biometric Framework, templates local only; a match releases the container |
 | Passkeys | Stored by the TPM provider, served through the Virtual CTAP Authenticator | Stored in the Hello container, served by `webauthn.dll` |
 | Reset | Account or admin password authorises destroying the root key and enrolling a new PIN; it never unlocks keys | "I forgot my PIN": re-authenticate with Microsoft/Entra account; default reset deletes the container |
 | Recovery | Through relying parties: re-register passkeys with each service (account recovery, second credential) | Same; Entra's non-destructive PIN reset service is the exception |
@@ -45,20 +45,20 @@ Rust, matching the TPM (`tss-esapi`), D-Bus (`zbus`) and CTAP libraries we use. 
 
 | Threat | Example | Mitigation |
 | :-- | :-- | :-- |
-| Caller impersonation | An app on D-Bus claims to be a browser, or asserts another site's origin | D-Bus callers are verified by peer credentials (sandbox app ID where there is one). Through the virtual CTAP authenticator the client sends only the relying-party ID hash and the origin check stays in the browser; which local processes may open the HID device, and what the user-presence prompt must show, are open and are settled in spike #94. Never trust a caller-supplied origin from an unprivileged client |
-| Unlock bypass | Biometric "match" accepted without the TPM policy actually being satisfied | Unlock state is enforced by the TPM policy session, never by a flag in the daemon |
+| Caller impersonation | An app on D-Bus claims to be a browser, or asserts another site's origin | D-Bus callers are verified by peer credentials (sandbox app ID where there is one). Through the virtual CTAP authenticator the client sends only the relying-party ID hash and the origin check stays in the browser; what the presence prompt shows is decided in [ADR-0020](../adr/0020-presence-and-verification.md); which local processes may open the HID device is open, and binding the device to one user and one session is [linux-hello#138](https://github.com/LinuxHello/linux-hello/issues/138). Never trust a caller-supplied origin from an unprivileged client |
+| Unlock bypass | Biometric "match" accepted without the TPM policy actually being satisfied | Unlock state is to be enforced by a TPM policy session, never by a flag in the daemon; how a biometric match satisfies it is open ([linux-hello#136](https://github.com/LinuxHello/linux-hello/issues/136)) |
 | Key exfiltration | Private key material leaves the provider | TPM keys non-exportable; the broker only receives signatures |
 | Wrong-site signature | A credential key of one relying party signs for another (helper bug, lookalike hash) | Each credential key's authorisation value is `HMAC(H, rpIdHash)` computed by the TPM, and the key carries `noDA`; another site's value is refused by the TPM ([spike 0119](../spikes/0119-rp-bound-credential-keys.md)) |
 | Compromised `uhid` helper | The helper creates a keyboard or another device instead of a security key | Own user, a udev grant for `/dev/uhid` only, an AppArmor profile, no TPM access; a udev rule hides every input device made through `uhid` from libinput and the seat. The helper can still create other `hidraw` devices ([spike 0121](../spikes/0121-uhid-helper-privilege.md)) |
 | Silent use | A passkey signs without the user's knowledge | A presence gesture for every request, asked for by the Prompt UI outside the calling app: one prompt and one signature per request, the silent probe a browser sends (`up=false`) answered without using the key ([spike 0120](../spikes/0120-resident-keys-presence-and-uv.md)) |
-| Forged presence or verification | A process of the same user clicks the prompt through synthetic input, or reads the PIN typed into it; a stale unlock is reported as user verification | Presence is a gesture the session cannot synthesise (a sensor match delivered to the Agent, or the PIN checked by the TPM); a click-only prompt is accepted only for classes that say `presence` on a machine with no sensor, and the documentation says it does not stop a process of the same user. UV=1 only for a verification of this request or within a window of at most 60 s that policy may shorten and never exceed. The prompt is started by the Agent as its own child, confined (own AppArmor profile, not dumpable), and the Agent accepts an answer only from that child. It shows the relying-party id from the request and labels from the Credential Index, never text the client sends ([spike 0120](../spikes/0120-resident-keys-presence-and-uv.md); the decision is ADR-0020, proposed on [#139](https://github.com/LinuxHello/linux-hello/issues/139)) |
+| Forged presence or verification | A process of the same user clicks the prompt through synthetic input, or reads the PIN typed into it; a stale unlock is reported as user verification | Presence is a gesture the session cannot synthesise (a sensor match delivered to the Agent, or the PIN checked by the TPM); a click-only prompt is accepted only for classes that say `presence` on a machine with no sensor, and the documentation says it does not stop a process of the same user. UV=1 only for a verification of this request or within a window of at most 60 s that policy may shorten and never exceed. The prompt is started by the Agent as its own child, confined (own AppArmor profile, not dumpable), and the Agent accepts an answer only from that child. It shows the relying-party id from the request and labels from the Credential Index, never text the client sends ([spike 0120](../spikes/0120-resident-keys-presence-and-uv.md); decided in [ADR-0020](../adr/0020-presence-and-verification.md), accepted 2026-11-15) |
 | Stolen old blob | A copy of the root key's blob from before a PIN change, plus the old PIN, still unlocks every key under it ([spike 0011](../spikes/0011-tpm-root-key-change-auth.md)) | The PIN change deletes the old blob; for a stronger guarantee the root key needs a policy tied to a counter the change increments (not tried) |
 | Parser exploit | Malformed CTAP/CBOR or D-Bus message | Fuzzing; no `unsafe` in parsers |
 | Supply chain | Malicious or vulnerable crate | Pinned, audited dependencies |
 
 ### Controls
 
-1. `#![forbid(unsafe_code)]` in every crate except one small, audited TPM FFI crate.
+1. No `unsafe` code, except in one small, audited module each in the TPM provider and the PAM module. Every other crate root sets `#![forbid(unsafe_code)]`; an exception must be listed in `scripts/ci/unsafe-allowlist.txt`, and the `unsafe-policy` CI job enforces it (invariant 4 in [AGENTS.md](https://github.com/LinuxHello/linux-hello/blob/main/AGENTS.md#invariants)).
 2. CI gates that block a merge: clippy (deny warnings), cargo-audit, cargo-deny (licences and advisories), fuzzing on every parser.
 3. Each security property written in plain language and backed by a test whose name states it (e.g. "a caller from another origin is refused"). The operator reviews properties and test results, not code.
 4. systemd sandboxing (dedicated user, `ProtectSystem=strict`, `NoNewPrivileges`, restricted address families, `DeviceAllow` for `/dev/tpmrm0` only) plus an AppArmor profile.
@@ -90,7 +90,7 @@ CI check: the Tetragon policies are applied in a test VM and each alert is trigg
 - Detection is only useful if watched: Tetragon events and the Agent's audit log are shipped to the log stack (e.g. Alloy → Loki → Grafana) with alert rules, not just written to disk.
 - Enabling BPF-LSM is a kernel command-line (bootloader) change, documented per deployment.
 
-Open question: who owns the threat model and the property list. Proposed: the maintainer, with tests written by Claude and reviewed upstream.
+The maintainer owns the [threat model](https://github.com/LinuxHello/linux-hello/blob/main/docs/security/threat-model.md) and the [property list](https://github.com/LinuxHello/linux-hello/blob/main/docs/security/properties.md) ([ADR-0004](../adr/0004-agent-roles.md)); the lead writes and reviews the tests.
 
 ## User experience
 
@@ -170,7 +170,7 @@ The Routing Policy Engine in the Agent answers one question before every credent
 2. User layer, kept by the Agent per uid in `/var/lib/linuxhello/users/<uid>/policy.toml` and set over D-Bus (`GetUserPolicy`, `SetUserPolicy`), from Settings or `linuxhello-ctl policy edit`; it can only tighten a default ([ADR-0018](../adr/0018-user-policy-layer.md)).
 3. Admin layer `/etc/linuxhello/policy.d/*.toml` (root-owned, 0644). Any key set here wins and is shown greyed out as "Managed by your organisation". Later: delivered by a management system, as Intune does on Windows.
 
-Most restrictive wins when two admin files conflict. The engine fails closed: a policy file that does not parse denies every operation except PIN.
+Most restrictive wins when two admin files conflict. The engine fails closed: when a policy file cannot be trusted (it does not parse, cannot be read, or is writable by others) the engine enters the PIN-only state, in which only the PIN works and biometrics are off. When only the user's layer is at fault, the admin layer's rules still hold, so a user's file can never lower an admin rule (the amendment of [ADR-0018](../adr/0018-user-policy-layer.md), proposed 2026-11-10, and the [policy semantics](https://github.com/LinuxHello/linux-hello/blob/main/docs/architecture/policy-semantics.md#fail-closed)).
 
 ### Settings
 

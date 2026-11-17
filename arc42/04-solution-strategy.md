@@ -18,7 +18,7 @@ Part of the [Arc42 architecture documentation](README.md).
 
 | Layer | Responsibility | Candidate components |
 | :-- | :-- | :-- |
-| 1. Unlock | One biometric/PIN verification per session; re-prompt per policy | PAM, `fprintd`, Howdy, PIN |
+| 1. Unlock | Check the user with the face, a fingerprint or the PIN at login, at the lock screen, for `sudo` and for passkey requests; ask again as the policy says | The Agent's Method Orchestrator runs `fprintd`, Howdy and the PIN; the PAM module only asks the Agent ([ADR-0023](../adr/0023-pam-module-and-login-failure.md)) |
 | 2. Broker | Single policy point; signs WebAuthn assertions; never exports private keys | The Agent and the Virtual CTAP Authenticator ([ADR-0005](../adr/0005-provider-path.md)) |
 | 3. Interfaces | CTAP2 over a virtual USB security key (`uhid`) for WebAuthn; Secret Service API on D-Bus for tokens | Virtual CTAP Authenticator |
 | 4. Routing policy | Per context and relying party: methods, provider, prompt level | Declarative policy files |
@@ -35,7 +35,8 @@ flowchart TB
   end
   P[Virtual CTAP authenticator<br/>uhid, looks like a USB security key]
   BR[Agent<br/>policy + unlock state]
-  U[PAM unlock<br/>fprintd / Howdy / PIN]
+  U[PAM module<br/>login, lock screen, sudo]
+  M[Methods run by the Agent<br/>fprintd / Howdy / PIN]
   R[Routing policy<br/>per relying party]
   T[TPM2 provider<br/>device-bound]
   K[KeePassXC provider<br/>portable]
@@ -45,7 +46,8 @@ flowchart TB
   N --> P
   E --> P
   P --> BR
-  U -->|session unlock| BR
+  U -->|asks| BR
+  BR --> M
   BR --> R
   R --> T
   R --> K
@@ -58,7 +60,7 @@ flowchart TB
 1. **Keys sign; stores keep secrets.** Passkey private keys stay in the TPM or KeePassXC and are used by the broker to sign. The Secret Service holds only resulting tokens, never passkey private keys.
 2. **Unlock gates use, never release.** Biometric verification unlocks a key's use. It never hands key material to a caller.
 3. **Operator chooses custody.** The routing policy decides TPM vs KeePassXC per relying party; the default for high-value accounts is TPM.
-4. **One path for all clients.** Browsers, native and Electron apps reach Linux Hello through the same virtual CTAP authenticator, which stock Firefox and Chromium already talk to as a USB security key ([ADR-0005](../adr/0005-provider-path.md) option B, [ADR-0017](../adr/0017-browser-path.md)). They see a roaming key, not a platform authenticator. There is no browser extension in 1.0; neither browser calls the credentials portal ([spike 0006](../spikes/0006-browser-webauthn-portal.md)). Before release the device must get resident keys, user verification and a presence prompt ([spike 0094](../spikes/0094-virtual-ctap-end-to-end.md)).
+4. **One path for all clients.** Browsers, native and Electron apps reach Linux Hello through the same virtual CTAP authenticator, which stock Firefox and Chromium already talk to as a USB security key ([ADR-0005](../adr/0005-provider-path.md) option B, [ADR-0017](../adr/0017-browser-path.md)). They see a roaming key, not a platform authenticator. There is no browser extension in 1.0; neither browser calls the credentials portal ([spike 0006](../spikes/0006-browser-webauthn-portal.md)). Resident keys, user verification and a presence prompt work through this device with stock Firefox and Chromium ([spike 0120](../spikes/0120-resident-keys-presence-and-uv.md)); [ADR-0020](../adr/0020-presence-and-verification.md) decides when the device reports presence and verification.
 5. **Short token lifetimes are respected.** The aim is invisible reissue, not longer tokens.
 
 ## Token reissue (the Claude Desktop case)
