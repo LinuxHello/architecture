@@ -21,7 +21,7 @@ A section marked **gap** has no content yet; nothing has been invented to fill i
 | Arc42 section | Note | State |
 | :-- | :-- | :-- |
 | 1. Introduction and goals | [01-introduction-and-goals.md](01-introduction-and-goals.md) | Written: Linux Hello in five minutes and what works today, the main requirements, ranked quality goals, stakeholders. Start here |
-| 2. Constraints | [02-constraints.md](02-constraints.md) | Written |
+| 2. Constraints | [02-constraints.md](02-constraints.md) | Written: the licence and upstream rules C1 to C5 with their reasons, the licences of the programs Linux Hello uses, the facts about the platform it must accept, and how the project works |
 | 3. Context and scope | [03-context-and-scope.md](03-context-and-scope.md) | Written: the people and the outside programs Linux Hello uses, what for and whether each is needed; the channel to each and whether it is built; what is not in scope |
 | 4. Solution strategy | [04-solution-strategy.md](04-solution-strategy.md) | Written: the idea in one paragraph, the five layers a request passes, the design rules with their reasons, signing in again without the user, and why this approach over the alternatives |
 | 5. Building block view | [05-building-block-view.md](05-building-block-view.md) | Written: the ten parts of Linux Hello and the pieces inside each, what each does and why it is separate, and which are built |
