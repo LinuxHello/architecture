@@ -180,6 +180,10 @@ A desktop program built from web technology, with its own copy of Chromium insid
 
 The Linux service that reads fingerprint sensors and matches a finger against the fingerprints a user has enrolled. Linux Hello asks it for a match; the fingerprint pictures stay in fprintd and are never copied.
 
+### Fuzzing
+
+Testing a parser by feeding it a stream of random and deliberately malformed input, to find inputs that crash it or make it misbehave. Linux Hello fuzzes every parser that reads messages from programs it does not trust, such as the Agent's D-Bus arguments and, later, the CTAP messages from browsers.
+
 ### hidraw
 
 The Linux interface through which a program reads and writes a *HID* device directly. Browsers find security keys through `/dev/hidraw*` devices. The device Linux Hello creates through *uhid* appears there.

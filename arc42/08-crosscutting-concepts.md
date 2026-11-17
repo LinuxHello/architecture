@@ -1,217 +1,72 @@
 ---
 type: architecture
-subject: "Arc42 section 8: crosscutting concepts of Linux Hello (trust chain, security hardening, user experience, policy)"
+subject: "Arc42 section 8: crosscutting concepts of Linux Hello (an overview of the trust chain, security, user experience and policy, each with a note of its own)"
 artifact: arc42-08-crosscutting-concepts
 status: active
 owner: "@atterdag"
 concepts: [trust-chain, threat-model, confinement, user-experience, policy, arc42]
 tags: [architecture, arc42, security, policy]
-sources: ["README.md", "https://github.com/LinuxHello/linux-hello/blob/main/docs/architecture/policy-semantics.md", "https://github.com/LinuxHello/linux-hello/blob/main/docs/security/README.md", "../adr/0003-destructive-reset.md", "https://docs.arc42.org/section-8/"]
-date: 2026-11-08
+sources: ["README.md", "08-trust-chain.md", "08-security.md", "08-user-experience.md", "08-policy.md", "https://github.com/LinuxHello/linux-hello/blob/main/docs/architecture/policy-semantics.md", "https://github.com/LinuxHello/linux-hello/blob/main/docs/security/README.md", "https://docs.arc42.org/section-8/"]
+date: 2026-11-17
 ---
 
 # 8. Crosscutting concepts
 
-Part of the [Arc42 architecture documentation](README.md). Concepts with a note of their own:
+Part of the [Arc42 architecture documentation](README.md).
 
-- Routing policy semantics, precise enough to implement and test: [policy-semantics.md](https://github.com/LinuxHello/linux-hello/blob/main/docs/architecture/policy-semantics.md).
-- Security properties, each with the test that states it: [docs/security/](https://github.com/LinuxHello/linux-hello/blob/main/docs/security/README.md).
+This section answers the question: which ideas run through every part of Linux Hello, rather than belonging to one part? Sections 5 to 7 describe the parts one by one; the ideas here apply to all of them at once. There are four, and each has a note of its own, because together they are too long for one page. This page gives each one in a few sentences and links to the full note. Terms that may be new to you are in the [glossary](12-glossary.md).
+
+| Concept | The question it answers | Full note |
+| :-- | :-- | :-- |
+| Trust chain | Which proof of identity unlocks what: the PIN, a fingerprint or face, or the account password? | [08-trust-chain.md](08-trust-chain.md) |
+| Security | What could an attacker try, and what stops them? | [08-security.md](08-security.md) |
+| User experience | What does the user see at every prompt, and how do they set Linux Hello up? | [08-user-experience.md](08-user-experience.md) |
+| Policy | Who decides which methods are allowed, where a passkey is kept, and how strict Linux Hello is? | [08-policy.md](08-policy.md) |
+
+Two related notes live in the code repository: the [policy semantics](https://github.com/LinuxHello/linux-hello/blob/main/docs/architecture/policy-semantics.md), precise enough to implement and test, and the [security properties and threat model](https://github.com/LinuxHello/linux-hello/blob/main/docs/security/README.md), each property with the test that checks it.
+
+The headings below keep the names that other pages link to.
 
 ## Trust chain
 
-The PIN is the root, biometrics are a shortcut, and the account password is a destructive reset. This follows the Windows Hello default.
-
-| Tier | Linux Hello | Windows Hello parallel |
-| :-- | :-- | :-- |
-| Root | PIN = TPM2 authorisation on a per-user root key; every passkey key hangs off it; TPM anti-hammering limits guessing; PIN never leaves the device | PIN unlocks the TPM-protected Windows Hello container; TPM anti-hammering |
-| Shortcut | fprintd / Howdy confirm the user instead of the PIN; never the root; failure falls back to PIN. How a match is tied to the TPM is open ([linux-hello#136](https://github.com/LinuxHello/linux-hello/issues/136)) | Windows Biometric Framework, templates local only; a match releases the container |
-| Passkeys | Stored by the TPM provider, served through the Virtual CTAP Authenticator | Stored in the Hello container, served by `webauthn.dll` |
-| Reset | Account or admin password authorises destroying the root key and enrolling a new PIN; it never unlocks keys | "I forgot my PIN": re-authenticate with Microsoft/Entra account; default reset deletes the container |
-| Recovery | Through relying parties: re-register passkeys with each service (account recovery, second credential) | Same; Entra's non-destructive PIN reset service is the exception |
-
-### Decision LH-1: destructive reset, no recovery key
-
-A reset wipes the root key and every TPM-bound passkey; there is no recovery key, and recovery goes through the relying parties. Recorded as [ADR-0003](../adr/0003-destructive-reset.md).
+The PIN is the root: it is the TPM's password for the user's root key, under which every passkey hangs. A fingerprint or face is a shortcut that saves typing the PIN but never replaces it. The account password can only authorise a reset, which deletes the keys; it never unlocks them. This is the order Windows Hello uses by default ([ADR-0003](../adr/0003-destructive-reset.md)). Full note: [the trust chain](08-trust-chain.md).
 
 ## Security hardening
 
-Write Linux Hello in Rust, and treat logic flaws as a bigger risk than memory bugs. The maintainer reviews behaviour rather than Rust code, so assurance has to come from behaviour tests, CI gates and outside reviewers.
-
-### Language
-
-Rust, matching the TPM (`tss-esapi`), D-Bus (`zbus`) and CTAP libraries we use. A long-running daemon that holds key material and parses input from untrusted callers is where memory safety matters most. Rust does not prevent logic flaws.
+Linux Hello is written in Rust to rule out most memory bugs, and treats mistakes in logic as the larger risk. Confidence comes from tests that state security properties in plain words, CI checks that block a merge, and outside reviews. Full note: [security](08-security.md).
 
 ### Threats to design against
 
-| Threat | Example | Mitigation |
-| :-- | :-- | :-- |
-| Caller impersonation | An app on D-Bus claims to be a browser, or asserts another site's origin | D-Bus callers are verified by peer credentials (sandbox app ID where there is one). Through the virtual CTAP authenticator the client sends only the relying-party ID hash and the origin check stays in the browser; what the presence prompt shows is decided in [ADR-0020](../adr/0020-presence-and-verification.md); which local processes may open the HID device is open, and binding the device to one user and one session is [linux-hello#138](https://github.com/LinuxHello/linux-hello/issues/138). Never trust a caller-supplied origin from an unprivileged client |
-| Unlock bypass | Biometric "match" accepted without the TPM policy actually being satisfied | Unlock state is to be enforced by a TPM policy session, never by a flag in the daemon; how a biometric match satisfies it is open ([linux-hello#136](https://github.com/LinuxHello/linux-hello/issues/136)) |
-| Key exfiltration | Private key material leaves the provider | TPM keys non-exportable; the broker only receives signatures |
-| Wrong-site signature | A credential key of one relying party signs for another (helper bug, lookalike hash) | Each credential key's authorisation value is `HMAC(H, rpIdHash)` computed by the TPM, and the key carries `noDA`; another site's value is refused by the TPM ([spike 0119](../spikes/0119-rp-bound-credential-keys.md)) |
-| Compromised `uhid` helper | The helper creates a keyboard or another device instead of a security key | Own user, a udev grant for `/dev/uhid` only, an AppArmor profile, no TPM access; a udev rule hides every input device made through `uhid` from libinput and the seat. The helper can still create other `hidraw` devices ([spike 0121](../spikes/0121-uhid-helper-privilege.md)) |
-| Another user on the same seat | Bob, logged in on the same computer, opens the virtual key that Alice unlocked | A udev rule gives the key node to the one user named in the device, and the Agent ends the device when that session locks, leaves the front or ends; measured in a VM with two sessions on one seat ([spike 0138](../spikes/0138-virtual-ctap-session-binding.md)). Designed, not built |
-| Silent use | A passkey signs without the user's knowledge | A presence gesture for every request, asked for by the Prompt UI outside the calling app: one prompt and one signature per request, the silent probe a browser sends (`up=false`) answered without using the key ([spike 0120](../spikes/0120-resident-keys-presence-and-uv.md)) |
-| Forged presence or verification | A process of the same user clicks the prompt through synthetic input, or reads the PIN typed into it; a stale unlock is reported as user verification | Presence is a gesture the session cannot synthesise (a sensor match delivered to the Agent, or the PIN checked by the TPM); a click-only prompt is accepted only for classes that say `presence` on a machine with no sensor, and the documentation says it does not stop a process of the same user. UV=1 only for a verification of this request or within a window of at most 60 s that policy may shorten and never exceed. The prompt is started by the Agent as its own child, confined (own AppArmor profile, not dumpable), and the Agent accepts an answer only from that child. It shows the relying-party id from the request and labels from the Credential Index, never text the client sends ([spike 0120](../spikes/0120-resident-keys-presence-and-uv.md); decided in [ADR-0020](../adr/0020-presence-and-verification.md), accepted 2026-11-15) |
-| Stolen old blob | A copy of the root key's blob from before a PIN change, plus the old PIN, still unlocks every key under it ([spike 0011](../spikes/0011-tpm-root-key-change-auth.md)) | The PIN change deletes the old blob; for a stronger guarantee the root key needs a policy tied to a counter the change increments (not tried) |
-| Parser exploit | Malformed CTAP/CBOR or D-Bus message | Fuzzing; no `unsafe` in parsers |
-| Supply chain | Malicious or vulnerable crate | Pinned, audited dependencies |
+The threats include a program pretending to be another, another user on the same computer using the virtual security key, unlocking without a real check, keys being copied out, one website's key signing for another, a taken-over helper, silent or faked confirmation, an old copy of the root key, crafted messages and a malicious dependency. Each is listed with an example, its answer and its state in [security: threats to design against](08-security.md#threats-to-design-against).
 
 ### Controls
 
-1. No `unsafe` code, except in one small, audited module each in the TPM provider and the PAM module. Every other crate root sets `#![forbid(unsafe_code)]`; an exception must be listed in `scripts/ci/unsafe-allowlist.txt`, and the `unsafe-policy` CI job enforces it (invariant 4 in [AGENTS.md](https://github.com/LinuxHello/linux-hello/blob/main/AGENTS.md#invariants)).
-2. CI gates that block a merge: clippy (deny warnings), cargo-audit, cargo-deny (licences and advisories), fuzzing on every parser.
-3. Each security property written in plain language and backed by a test whose name states it (e.g. "a caller from another origin is refused"). The operator reviews properties and test results, not code.
-4. systemd sandboxing (dedicated user, `ProtectSystem=strict`, `NoNewPrivileges`, restricted address families, `DeviceAllow` for `/dev/tpmrm0` only) plus an AppArmor profile.
-5. Provider logic lives in its own crates behind an interface that does not know about `uhid` ([ADR-0005](../adr/0005-provider-path.md)); the privileged `uhid` helper is the only part that creates the device.
-6. External security audit of the TPM provider and broker before anyone relies on it.
+Six rules apply to the whole code base: no `unsafe` Rust outside two audited modules, CI checks that block a merge, security properties backed by tests, a systemd sandbox for every service, key handling apart from the virtual device, and an outside audit before release. See [security: controls](08-security.md#controls).
 
 ### Runtime confinement and detection
 
-**AppArmor (mandatory).** One profile per daemon and for `linuxhello-ctl`, shipped in **enforce** mode.
-
-- Only the TPM Provider and the Agent may open `/dev/tpmrm0`; only the Face Client path may reach Howdy; only Howdy, started by the Agent's helper, may open the camera; only the `uhid` helper may open `/dev/uhid`.
-- Policy files: admin layer read-only for every profile; the user layer is kept by the Agent in its state directory and set over D-Bus ([ADR-0018](../adr/0018-user-policy-layer.md)), so no other container's profile writes it.
-- Deny `ptrace` and `/proc/<pid>/mem` access to the Agent and providers.
-- CI loads every profile (`apparmor_parser`), runs the property tests under them, and fails on any `DENIED` line or on a profile left in complain mode.
-
-**Tetragon (optional, defence in depth).** Sample TracingPolicies shipped with the project; Linux Hello must not depend on them.
-
-- Alert on any process other than the Agent or TPM Provider opening `/dev/tpmrm0`.
-- Alert on writes to `/etc/linuxhello/policy.d/` or to the PAM stack files (`/etc/pam.d/*`).
-- Sigkill on non-loopback network connects from any Linux Hello process (none of them needs the network).
-- Alert on `ptrace` or `process_vm_readv` targeting the Agent or providers.
-- Without BPF-LSM, kprobe tracing and Sigkill enforcement work today; BPF-LSM hooks need `bpf` added to the kernel's active LSM list.
-
-CI check: the Tetragon policies are applied in a test VM and each alert is triggered once by a negative test.
-
-**Rules.**
-
-- Confinement fails closed: each unit checks that its AppArmor profile is loaded in enforce mode and refuses to start otherwise.
-- Detection is only useful if watched: Tetragon events and the Agent's audit log are shipped to the log stack (e.g. Alloy → Loki → Grafana) with alert rules, not just written to disk.
-- Enabling BPF-LSM is a kernel command-line (bootloader) change, documented per deployment.
-
-The maintainer owns the [threat model](https://github.com/LinuxHello/linux-hello/blob/main/docs/security/threat-model.md) and the [property list](https://github.com/LinuxHello/linux-hello/blob/main/docs/security/properties.md) ([ADR-0004](../adr/0004-agent-roles.md)); the lead writes and reviews the tests.
+Every Linux Hello program runs under an AppArmor profile in enforce mode and refuses to start without it; optional Tetragon rules report suspicious actions, and the reports are meant to reach a log system with alerts. See [security: confinement and detection while it runs](08-security.md#confinement-and-detection-while-it-runs).
 
 ## User experience
 
-At every prompt the user can see which method is active, switch to another, and enrol a method from a graphical wizard. This usability is what makes Windows Hello adoptable by ordinary users and enterprises, and it sets the bar.
+At every prompt the user sees which method is running, can switch to another, and always has the PIN on offer; face and fingerprint run at the same time. The full requirements UX1 to UX8 and how they are met are in [user experience](08-user-experience.md).
 
 ### Requirements
 
-| ID | Requirement | Surfaces |
-| :-- | :-- | :-- |
-| UX1 | The active method is always visible: face (camera live, scanning), fingerprint (touch sensor), PIN (field focused) | Login manager, lock screen, in-session prompts |
-| UX2 | The user can switch method at any prompt ("Sign-in options"), with PIN always offered | All prompts |
-| UX3 | Face and fingerprint run in parallel, first match wins; no sequential PAM timeouts | All prompts |
-| UX4 | Clear failure feedback ("Face not recognised — try again or use PIN") and lockout state from the TPM ("PIN locked for N min") | All prompts |
-| UX5 | Identical look and behaviour on the login manager, lock screen and in-session prompts | Plasma login manager, kscreenlocker, Prompt UI |
-| UX6 | Face enrolment wizard: live camera preview, guided capture, an immediate recognition test, re-enrol and delete | System Settings |
-| UX7 | Fingerprint enrolment reuses KDE's existing fingerprint UI in the Users settings page, linked from the same Linux Hello page | System Settings |
-| UX8 | First-run wizard: PIN first (the root), then optional face and fingerprint | Enrolment Wizard |
-
-**UX6a — Face enrolment preview. Deferred: not part of 1.0 ([ADR-0015](../adr/0015-face-capture-and-enrolment.md)).** The design below is the target. Howdy exposes no preview or detection results ([spike 0008](../spikes/0008-howdy-interface.md)), so 1.0 shows guided text and a recognition test instead. The wizard is meant to show the regular (RGB) camera feed as the user's view, while Howdy captures from the infrared (IR) sensor, as Windows Hello does. Rules for when it is built:
-
-- Guidance overlay (face found, too close, turn slightly, captured) is driven by IR detection, never by the RGB image, so the feedback reflects what is actually enrolled. It needs detection results that Howdy does not give; the routes are an upstream interface or a component of ours, each a new ADR.
-- The RGB feed is display only: never stored, never passed to Howdy.
-- The camera has one owner at a time: while Howdy captures, only Howdy holds the IR stream, which avoids the RGB and IR start-order failure on the Logitech BRIO ([spike 0012](../spikes/0012-camera-rgb-ir-concurrent.md)).
-- No RGB camera present → show the IR feed in greyscale.
-- If both streams cannot be held, fall back to no live RGB preview or to an IR preview. One camera model has been tested; a second is needed.
-
-**UX7a — One place for sign-in methods.** Face recognition sits beside fingerprint in KDE's Users settings page, where fingerprint enrolment already lives; KDE's fingerprint flow stays unchanged.
-
-- Add a "Configure Face Recognition" entry next to the existing "Configure Fingerprint Authentication" entry, opening the Face Enrolment Module.
-- `kcm_users` has no extension point for authentication methods ([spike 0010](../spikes/0010-kcm-users-extension-point.md)). Until KDE accepts a change (not planned), the entries live on Linux Hello's own settings page, placed next to Users in System Settings; KDE's fingerprint flow stays on the Users page.
-- Interim until accepted upstream: a separate Linux Hello page in System Settings, linked from the same area.
-
-**UX7b — PIN management.** A "Change PIN" entry sits in the same area, beside fingerprint and face.
-
-- Change PIN: enter the current PIN, then the new one twice. The TPM root key's authorisation value is changed in place, so passkeys survive (non-destructive).
-- PIN rules shown up front (minimum length, digits only or alphanumeric) and checked as the user types.
-- "I forgot my PIN" links to the destructive reset (ADR-0003), with a clear warning that device-bound passkeys will be wiped.
-- Lockout state from the TPM is shown ("PIN locked for N min").
+The eight requirements, from "the active method is always visible" (UX1) to "the first-run setup asks for the PIN first" (UX8), are listed in [user experience: requirements](08-user-experience.md#requirements).
 
 ### Design consequence
 
-A PAM conversation is text only, so a greeter cannot tell which method is running. Linux Hello therefore adds a side channel: the Agent runs fprintd and Howdy concurrently in its method orchestrator (instead of stacking `pam_fprintd` and `pam_howdy`), on behalf of a prompt that `pam_linuxhello` opens, and publishes the live state on its D-Bus API (`MethodsAvailable`, `ActiveMethod`, `State`, `Result`, and `Closed` when the prompt ends, so a component can stop its indicator). The login manager and the Prompt UI render from that one state through a shared QML component; the lock screen shows the text of KDE's own Face and Fingerprint PAM services on Plasma 6.8 and later ([ADR-0016](../adr/0016-prompt-hosts.md)). The state is served by the Agent on the system bus, per uid, by method reply or unicast signal and never broadcast ([ADR-0014](../adr/0014-agent-bus.md)); every prompt has an opaque identifier that the PAM module and the component both derive, because the PAM conversation is text only.
+Because PAM talks to a login screen only in text, Linux Hello adds a second channel: the Agent runs the methods and reports their live state on D-Bus, and every prompt draws from it. See [user experience: the design these requirements force](08-user-experience.md#the-design-these-requirements-force).
 
 ### Additions to the C4 model
 
-| Container | New component | Role |
-| :-- | :-- | :-- |
-| Linux Hello Agent | Method Orchestrator | Runs face, fingerprint and PIN in parallel; first success wins; cancels the rest ([ADR-0023](../adr/0023-pam-module-and-login-failure.md): moved here from the PAM module) |
-| Linux Hello Agent | PIN Socket | Dedicated unix socket; the caller is checked with `SO_PEERCRED`; the PIN is accepted only for the subject user the control call named; never a D-Bus message body ([ADR-0021](../adr/0021-pin-transport.md)) |
-| `pam_linuxhello` | Agent Client | Opens the prompt, hands the conversation to the orchestrator over the system bus, waits with a deadline, maps the answer to a PAM code |
-| Linux Hello Agent | Auth State Publisher | D-Bus signals for method, state and result per prompt |
-| Plasma Integration | Auth Prompt QML Component | Shared method indicator and switcher for the greeter, lock screen and Prompt UI |
-| Plasma Integration | Face Enrolment Module | Guided text, recognition test and delete; calls Howdy through the Agent's privileged helper; no live preview in 1.0 |
-| Plasma Integration | SDDM Theme | Own theme package embedding the shared component in SDDM |
-
-New external dependencies: Howdy's match, enrolment and test commands (subprocess and root CLI only), the camera as V4L2 nodes, KDE's fingerprint enrolment UI. All of these are in [workspace.dsl](../workspace.dsl).
-
-Decided by [ADR-0015](../adr/0015-face-capture-and-enrolment.md) and [ADR-0016](../adr/0016-prompt-hosts.md): Howdy is called as it is and there is no live preview in 1.0; the login manager gets an own SDDM theme and the lock screen uses KDE's stock Face and Fingerprint services (text only; on Plasma 6.6 inside the `kde` service). Spikes [0008](../spikes/0008-howdy-interface.md) and [0009](../spikes/0009-plasma-prompt-component.md) have the evidence.
+The user-experience design added the Method Orchestrator, the Auth State Publisher, the PAM module's Agent Client, the shared Auth Prompt, the Face Enrolment Module and the SDDM theme. [Section 5](05-building-block-view.md) describes them; [user experience: how the model changed](08-user-experience.md#how-the-model-changed) says why.
 
 ## Policy
 
-The Routing Policy Engine in the Agent answers one question before every credential operation: for this context, caller and relying party, which methods and provider are allowed, and how strong must the prompt be. It mirrors the Windows Hello for Business policy set (Group Policy / Intune) and adds per-context rules.
-
-### How it is engaged
-
-| Caller | Asks | Gets back |
-| :-- | :-- | :-- |
-| Method Orchestrator (in the Agent; the PAM module only opens the prompt, [ADR-0023](../adr/0023-pam-module-and-login-failure.md)) | Allowed methods for context `login`, `unlock`, `sudo`, … | Method set, factor count |
-| TPM Provider / KeePassXC Bridge | Decision for relying party + operation (create, get) + verified caller app ID | Provider, prompt level (none, presence, re-verify), factors |
-| Prompt UI / Auth Prompt | Which methods to offer and switch between | Method list, locked options |
-| PIN Manager | PIN rules | Complexity rules, lockout threshold |
-| Settings Module | Effective policy and which keys are admin-locked | Values + `managed` flags |
+The routing policy is a set of rules in text files that the Agent reads before every sign-in and passkey request: which methods each situation allows, where each website's passkey is kept, and how strong the prompt must be. Full note: [policy](08-policy.md).
 
 ### Layers and precedence
 
-1. Built-in defaults.
-2. User layer, kept by the Agent per uid in `/var/lib/linuxhello/users/<uid>/policy.toml` and set over D-Bus (`GetUserPolicy`, `SetUserPolicy`), from Settings or `linuxhello-ctl policy edit`; it can only tighten a default ([ADR-0018](../adr/0018-user-policy-layer.md)).
-3. Admin layer `/etc/linuxhello/policy.d/*.toml` (root-owned, 0644). Any key set here wins and is shown greyed out as "Managed by your organisation". Later: delivered by a management system, as Intune does on Windows.
-
-Most restrictive wins when two admin files conflict. The engine fails closed: when a policy file cannot be trusted (it does not parse, cannot be read, or is writable by others) the engine enters the PIN-only state, in which only the PIN works and biometrics are off. When only the user's layer is at fault, the admin layer's rules still hold, so a user's file can never lower an admin rule (the amendment of [ADR-0018](../adr/0018-user-policy-layer.md), proposed 2026-11-10, and the [policy semantics](https://github.com/LinuxHello/linux-hello/blob/main/docs/architecture/policy-semantics.md#fail-closed)).
-
-### Settings
-
-| Group | Setting | Windows Hello for Business parallel |
-| :-- | :-- | :-- |
-| PIN | `min_length`, `max_length` | Minimum / Maximum PIN length |
-| PIN | `digits`, `lowercase`, `uppercase`, `special` (`required` / `allowed` / `disallowed`) | Digits, Lowercase, Uppercase, Special characters |
-| PIN | `history`, `expiry_days` | History, Expiration |
-| PIN | `lockout_attempts`, `lockout_minutes` (settings of the Agent's own per-user counter; the TPM's dictionary-attack parameters are never changed) | TPM anti-hammering |
-| Methods | `biometrics_allowed` | Allow use of biometrics |
-| Methods | `face_requires_ir` (anti-spoofing) | Enhanced anti-spoofing |
-| Methods | `require_hardware_tpm` | Use a hardware security device |
-| Context | per context: `methods`, `factors`, `reverify_after` | No direct parallel (extension) |
-| Relying party | per RP or RP class: `provider` (tpm / keepassxc / any), `prompt`, `require_second_credential` | No direct parallel (extension) |
-
-### Example (admin layer)
-
-```toml
-[pin]
-min_length = 6
-digits = "required"
-special = "allowed"
-lockout_attempts = 5
-
-[methods]
-biometrics_allowed = true
-face_requires_ir = true
-
-[context.sudo]
-methods = ["pin"]
-
-[context.unlock]
-methods = ["face", "fingerprint", "pin"]
-reverify_after = "8h"
-
-[rp_class.banking]
-match = ["*.bank.example"]
-provider = "tpm"
-factors = 2          # e.g. fingerprint + PIN
-require_second_credential = true
-```
-
-Schema is a draft; key names are proposals, **untested**.
+Built-in defaults come first, then the user's own layer, which can only make rules stricter, then the administrator's layer, which wins. A file that cannot be trusted puts Linux Hello in the PIN-only state. See [policy: three layers of rules](08-policy.md#three-layers-of-rules).
