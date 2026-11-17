@@ -2,7 +2,7 @@
 type: adr
 subject: The Agent answers GetStatus with the conditions that affect the caller, and shows file names to root only
 artifact: adr
-status: proposed
+status: accepted
 owner: "@atterdag"
 concepts: [dbus, status, conditions, doctor, lock-screen, one-way-door]
 tags: [adr, one-way-door, dbus, ux]
@@ -14,7 +14,7 @@ date: 2026-11-17
 
 ## Status
 
-Proposed, 2026-11-17. Answers [linux-hello#214](https://github.com/LinuxHello/linux-hello/issues/214), the interface behind [#155](https://github.com/LinuxHello/linux-hello/issues/155) (the offline `linuxhello-ctl status` and `doctor`, built) and [#213](https://github.com/LinuxHello/linux-hello/issues/213) (status on the login and lock screens). A new D-Bus method is a one-way door (AGENTS.md invariant 7), so it waits for the maintainer's decision.
+Accepted, 2026-11-17, on the maintainer's decision the same day (proposed 2026-11-17). Answers [linux-hello#214](https://github.com/LinuxHello/linux-hello/issues/214), the interface behind [#155](https://github.com/LinuxHello/linux-hello/issues/155) (the offline `linuxhello-ctl status` and `doctor`, built) and [#213](https://github.com/LinuxHello/linux-hello/issues/213) (status on the login and lock screens). A new D-Bus method is a one-way door (AGENTS.md invariant 7), so it needed the maintainer's decision, which is given.
 
 ## Context
 

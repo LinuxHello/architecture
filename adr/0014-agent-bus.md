@@ -73,7 +73,7 @@ Test names the code will use: `every_error_has_a_fixed_name_and_text`, `invalid_
 
 **Harder (amendment):** more members to confine and test (each is on the interface the profile already names); the error names are a second vocabulary clients must learn once; `Result` and `ActiveMethod` change shape, which is only free until the first client ships.
 
-Not decided here: the status method (ADR-0024, proposed in a pull request of its own) and the control call for the PIN socket ([ADR-0021](0021-pin-transport.md)).
+Not decided here: the status method ([ADR-0024](0024-agent-status-interface.md), accepted 2026-11-17) and the control call for the PIN socket ([ADR-0021](0021-pin-transport.md)).
 
 ## Consequences
 
