@@ -37,7 +37,7 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
                 tpmProviderApi = component "Provider Interface" "Credential operations the Virtual CTAP Authenticator calls; knows nothing about uhid, so another front end can replace it (ADR-0005)" "zbus"
                 credStore = component "Credential Index" "Resident (discoverable) credentials kept by the Agent: handle (the credential ID of a resident key) to relying party, user entity, provider and TPM-wrapped key blobs; answers a get with no allow list; no private key material (spike 0120)" "Rust"
                 tpmKeys = component "TPM Key Service" "Root key as a non-primary child of a storage primary, PIN change in place (new blob, old blob deleted), child keys, policy sessions, signing (spike 0011)" "Rust"
-                tpmFfi = component "TPM FFI" "The only crate allowed unsafe code" "tss-esapi"
+                tpmFfi = component "TPM FFI" "The one module of this container allowed unsafe code; the PAM module has the other (invariant 4)" "tss-esapi"
             }
 
             kpxcBridge = container "KeePassXC Provider Bridge" "Portable passkeys from KeePassXC" "Rust daemon" {
