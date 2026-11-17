@@ -350,6 +350,10 @@ The rules that decide, before every operation, which methods a *context* allows,
 
 What Linux Hello accepts as *user presence*: a fingerprint match delivered by fprintd, or the PIN checked by the TPM. A mouse click is not enough when a sensor exists, because another program of the user could fake the click (*actor* M2). On a machine without any sensor, a policy may allow a click, and the documentation says what that does not stop ([ADR-0020](../adr/0020-presence-and-verification.md)).
 
+### Prompt
+
+In the Agent: the record of one sign-in attempt, from the moment a program asks the Agent to check a user until the attempt succeeds, fails or is cancelled. It is named by an identifier that the PAM module and the login screen can each work out on their own, so the login screen can follow the attempt and show which method is running. A prompt belongs to the user it was opened for, and it ends when its opener disconnects or after five minutes without news ([ADR-0014](../adr/0014-agent-bus.md)). Not to be confused with the *Prompt UI*, the window that asks the user to confirm a passkey.
+
 ### Prompt level
 
 How strongly a relying party's request is confirmed, set per *relying-party class*: `none` (no question), `presence` (a *presence gesture*) or `reverify` (verify again with a method).

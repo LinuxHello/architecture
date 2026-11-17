@@ -25,7 +25,7 @@ A section marked **gap** has no content yet; nothing has been invented to fill i
 | 3. Context and scope | [03-context-and-scope.md](03-context-and-scope.md) | Business context: C4 `Context` view; technical context is a gap |
 | 4. Solution strategy | [04-solution-strategy.md](04-solution-strategy.md) | Written |
 | 5. Building block view | [05-building-block-view.md](05-building-block-view.md) | Written; C4 `Containers` and component views |
-| 6. Runtime view | [06-runtime-view.md](06-runtime-view.md) | User journeys; scenarios at container level are a gap |
+| 6. Runtime view | [06-runtime-view.md](06-runtime-view.md) | Written: four walkthroughs with sequence diagrams (signing in with a fingerprint, signing in when Linux Hello is not working, a passkey on a website, resetting a forgotten PIN), each saying what is built |
 | 7. Deployment view | [07-deployment-view.md](07-deployment-view.md) | Written: how the Agent is installed and confined, tested on Ubuntu 24.04 and 26.04 |
 | 8. Crosscutting concepts | [08-crosscutting-concepts.md](08-crosscutting-concepts.md), [policy-semantics.md](https://github.com/LinuxHello/linux-hello/blob/main/docs/architecture/policy-semantics.md), [docs/security/](https://github.com/LinuxHello/linux-hello/blob/main/docs/security/README.md) | Written |
 | 9. Architecture decisions | [09-architecture-decisions.md](09-architecture-decisions.md) → [docs/adr/](../adr/README.md) | Written |
