@@ -260,6 +260,10 @@ systemd is the program that starts and supervises the services of a Linux system
 
 A tool that watches what processes do in the kernel, through eBPF (small programs the kernel runs safely on its own events), and can report or stop forbidden actions, such as a program other than Linux Hello opening the TPM. Linux Hello ships sample rules for it, but works without it.
 
+### TOML
+
+A simple text format for settings, with `key = value` lines grouped under headings in square brackets. Linux Hello's policy files, the user layer and the admin layer, are written in TOML.
+
 ### uhid
 
 A Linux interface, the device file `/dev/uhid`, through which a program can create a *HID* device in software. The kernel then shows it to other programs as if it were plugged in. Linux Hello uses it to create its virtual security key. Because `uhid` can also create a keyboard, only one small program, the *uhid helper*, may open it ([spike 0121](../spikes/0121-uhid-helper-privilege.md)).
@@ -283,6 +287,10 @@ The number Linux uses for a user account. The Agent serves all users of the mach
 ### Wayland, X11
 
 The two systems that put windows on a Linux screen. Under X11 any program of the user can read the keys typed into another window; under Wayland it cannot. A PIN typed under X11 can therefore be observed by another program of the same user, which Linux Hello documents and does not prevent ([ADR-0020](../adr/0020-presence-and-verification.md)).
+
+### Watchdog
+
+A timer that systemd keeps for a service. The service must report "still alive" before the timer runs out, or systemd counts it as hung and restarts it. The Agent's unit sets the timer to 30 seconds, and the Agent reports only after it has answered a call to itself over the bus, so a hung message loop leads to a restart ([agent restart](https://github.com/LinuxHello/linux-hello/blob/main/docs/architecture/agent-restart.md)).
 
 ## Linux Hello's own words
 
