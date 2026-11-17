@@ -14,7 +14,7 @@ date: 2026-11-08
 
 ## Status
 
-Accepted, 2026-11-08, on the maintainer's decision the same day (proposed 2026-11-08). Amendment accepted 2026-11-16, on the maintainer's decision the same day: what identifies a caller (see *Amendment 2026-11-16*); it changes the *Policy* point and is the answer to [linux-hello#162](https://github.com/LinuxHello/linux-hello/issues/162).
+Accepted, 2026-11-08, on the maintainer's decision the same day (proposed 2026-11-08). Amendment accepted 2026-11-16, on the maintainer's decision the same day: what identifies a caller (see *Amendment 2026-11-16*); it changes the *Policy* point and is the answer to [linux-hello#162](https://github.com/LinuxHello/linux-hello/issues/162). Amendment proposed 2026-11-17: the errors, the result and the contract of the interface (see *Amendment 2026-11-17*), the answer to [linux-hello#156](https://github.com/LinuxHello/linux-hello/issues/156); it is not accepted yet.
 
 ## Context
 
@@ -55,6 +55,25 @@ What a process of the same user can therefore do: open prompts for itself (withi
 If a later decision needs to tell the module from other processes of one uid (for example a helper with its own uid at the lock screen), that is a new amendment; this one only records that none is enforced.
 
 The user-visible Plasma pieces (Prompt UI, settings page) stay in the user's session and call the Agent over the system bus. Nothing here changes the interface name or version.
+
+### Amendment 2026-11-17 (proposed): errors, results and the contract of the interface
+
+The interface is a one-way door once the PAM module and the prompt component ship. Six gaps are cheap to close before they do ([linux-hello#156](https://github.com/LinuxHello/linux-hello/issues/156)). `Unsubscribe` and the `Closed` signal are built ([#203](https://github.com/LinuxHello/linux-hello/issues/203)); the rest is decided here.
+
+1. **Errors have names of their own.** The Agent replies with `io.github.LinuxHello.Error.<Name>`, a closed set: `Denied`, `LimitReached`, `InvalidArgument`, `InvalidPolicy`, `Unavailable`, `Damaged`. They have the meanings of today's generic errors (`AccessDenied`, `LimitsExceeded`, `InvalidArgs`, `Failed`), and a client matches the name, never the text. The text of every error is fixed and carries nothing of the request, except `InvalidPolicy`.
+2. **`InvalidPolicy` names the caller's own mistake.** `SetUserPolicy` with a layer the schema rejects returns `InvalidPolicy` with the validation message: the key or line and what is wrong. The text is the caller's own, so nothing leaks; it is built by the parser from a closed set of phrases and the offending key, never from another user's file or an admin file. Test: `invalid_user_policy_names_the_offending_key`. A refusal that would tell a caller something about a prompt, a user or a file that is not theirs stays `Denied` with the same fixed text whether or not it exists (P-04, P-05).
+3. **The caller can read what applies to them.** `GetEffectivePolicy() -> (s, as)` returns the effective policy for the caller as TOML text with the keys an administrator manages listed in the array, so the Settings module can grey them out; `GetPinRules() -> (u, u, as, as)` returns the minimum and maximum length and the required and disallowed character classes, for the PIN dialog. Both answer from the merged layers and show values, never file names or the admin layers themselves.
+4. **A result says why and for how long.** `Result` is `(prompt_id, result, reason, retry_after)`: `reason` is a closed set (`""`, `too-dark`, `no-face`, `not-recognised`, `cancelled`, `timeout`), `retry_after` is a number of seconds, nonzero only for `locked-out`. `GetState` returns the same two fields. The interface carries no clients yet, so changing the signature of `Result` costs nothing now and would break everyone later.
+5. **Methods run in parallel, so the signal is a list.** `ActiveMethod(prompt_id, method)` becomes `ActiveMethods(prompt_id, methods)`; an empty list means none is running. `GetState` returns the list.
+6. **The interface says what it is.** `GetCapabilities() -> (u, as)` returns the interface version (1) and the names of the optional members the Agent supports. A property would be natural, but the bus policy denies reading properties, so it is a method. From version 1 the rule is: **a change is additive** (a new member, a new optional field in a closed set); a change that is not is a new interface name (`Agent2`) served next to the old one.
+
+Test names the code will use: `every_error_has_a_fixed_name_and_text`, `invalid_user_policy_names_the_offending_key`, `a_user_reads_only_its_own_effective_policy`, `a_locked_out_result_carries_the_seconds`, `active_methods_is_a_list`, `capabilities_name_the_version`. The QML component can render "locked for N min" from the contract alone.
+
+**Easier (amendment):** the Settings page and `linuxhello-ctl policy edit` say which key is wrong; the PIN dialog shows the rules as the user types; the lock screen shows "locked for 5 min" and "too dark"; clients can tell what the Agent supports.
+
+**Harder (amendment):** more members to confine and test (each is on the interface the profile already names); the error names are a second vocabulary clients must learn once; `Result` and `ActiveMethod` change shape, which is only free until the first client ships.
+
+Not decided here: the status method (ADR-0024, proposed in a pull request of its own) and the control call for the PIN socket ([ADR-0021](0021-pin-transport.md)).
 
 ## Consequences
 
