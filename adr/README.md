@@ -35,5 +35,6 @@ date: 2026-11-08
 - [ADR-0021: How the PIN reaches the Agent and the TPM](0021-pin-transport.md) (amends ADR-0014)
 - [ADR-0022: Crate and package names, and what is published](0022-crate-and-package-names.md)
 - [ADR-0023: A thin PAM module, and what login does when Linux Hello fails](0023-pam-module-and-login-failure.md) (amends the model)
+- [ADR-0024: The Agent's status interface](0024-agent-status-interface.md) (proposed)
 
 New ADRs start from [the template](../templates/adr.md).
