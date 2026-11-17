@@ -5,7 +5,7 @@ artifact: arc42-07-deployment-view
 status: draft
 owner: "@atterdag"
 concepts: [deployment, arc42]
-tags: [architecture, arc42, arc42-gap]
+tags: [architecture, arc42]
 sources: ["README.md", "../workspace.dsl", "../adr/0014-agent-bus.md", "https://docs.arc42.org/section-7/"]
 date: 2026-11-08
 ---
