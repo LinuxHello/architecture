@@ -66,9 +66,9 @@ In one sentence: no check that the Agent can make on a connection from the user'
 1. Use label and cgroup together as a check against mistakes and ordinary software, and say in the design that it does not stop hostile same-user code.
 2. Do not let a click in the prompt be the only proof of presence when a policy asks for more. When the policy asks for a verified person, the evidence comes from the sensor or from the PIN path that the Agent checks itself (the PIN socket of [ADR-0021](../adr/0021-pin-transport.md)), as [ADR-0020](../adr/0020-presence-and-verification.md) already says. Then an impostor prompt can at most change what is shown, not what is signed, and the risk that remains is a wrong relying-party name on screen.
 3. Keep the prompt non-dumpable and under its own profile (as in spike 0120), so it cannot be inspected or controlled by other programs of the user.
-4. Run a follow-up spike on the one open part: how the Agent gets a descriptor into the prompt (option B2), for example through the user's systemd with socket activation.
+4. Start the prompt as a system unit from the Agent and check its system control group, as the [follow-up note](0177-prompt-launch-by-the-system-manager.md) tested: it removes the cgroup forgery of this note. How to pass a descriptor to the prompt (option B2) was not needed after that and was not tested.
 
-**Not tested:** the real Agent and prompt (stand-ins only), a graphical desktop session and Plasma's own way of launching applications, snap-confined programs, and Ubuntu 26.04. The ways the real prompt would be started (unit file location, who may override it) are not tested.
+**Not tested:** the real Agent and prompt (stand-ins only), a graphical desktop session and Plasma's own way of launching applications, snap-confined programs, and Ubuntu 26.04. How the real prompt is started is tested in the [follow-up note](0177-prompt-launch-by-the-system-manager.md).
 
 ## Consequences
 
