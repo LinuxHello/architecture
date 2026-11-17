@@ -216,6 +216,10 @@ KDE's store for passwords and tokens, an implementation of the *Secret Service*.
 
 The program that shows the login screen after boot and starts the user's session. The part the user sees is called the greeter. Plasma uses SDDM, and Plasma 6.8 brought the Plasma Login Manager, a fork of SDDM. Linux Hello adds an SDDM theme that shows which sign-in method is running; the Plasma Login Manager has no place for a theme like that, so it is not supported in 1.0 ([ADR-0016](../adr/0016-prompt-hosts.md)).
 
+### logind
+
+The systemd service that keeps track of who is logged in: each login is a *session*, and each session belongs to a *seat*. It tells other programs when a session comes to the front, goes to the background or sets its *locked hint* (the screen is locked). Linux Hello's Agent listens to it to decide when the virtual security key may exist ([spike 0138](../spikes/0138-virtual-ctap-session-binding.md)).
+
 ### PAM
 
 Pluggable Authentication Modules, the Linux framework that every program asking "who are you?" uses: the login screen, the lock screen, `sudo`, `su`. Each program has a *PAM stack*, a list of modules in `/etc/pam.d/` that are tried in order. `pam_unix` is the module that checks the account password. Linux Hello adds its own module, `pam_linuxhello`, before `pam_unix`, so that the account password still works when Linux Hello does not ([ADR-0023](../adr/0023-pam-module-and-login-failure.md)).
@@ -259,6 +263,14 @@ A tool that watches what processes do in the kernel, through eBPF (small program
 ### uhid
 
 A Linux interface, the device file `/dev/uhid`, through which a program can create a *HID* device in software. The kernel then shows it to other programs as if it were plugged in. Linux Hello uses it to create its virtual security key. Because `uhid` can also create a keyboard, only one small program, the *uhid helper*, may open it ([spike 0121](../spikes/0121-uhid-helper-privilege.md)).
+
+### seat
+
+The set of screen, keyboard and mouse that one person sits at. On an ordinary computer there is one seat, `seat0`. Several users can be logged in on it (fast user switching), but only the session in front can use the devices of the seat.
+
+### uaccess
+
+A tag that udev puts on a device file so that *logind* gives the user in front on the seat permission to open it. It is how a plain user may open `/dev/hidraw*` nodes of security keys without being root. Linux Hello removes it from its virtual key, because that tag would also give the key to a user who is in front but is not the owner ([spike 0138](../spikes/0138-virtual-ctap-session-binding.md)).
 
 ### udev
 
