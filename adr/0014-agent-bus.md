@@ -14,7 +14,7 @@ date: 2026-11-08
 
 ## Status
 
-Accepted, 2026-11-08, on the maintainer's decision the same day (proposed 2026-11-08). Amendment accepted 2026-11-16, on the maintainer's decision the same day: what identifies a caller (see *Amendment 2026-11-16*); it changes the *Policy* point and is the answer to [linux-hello#162](https://github.com/LinuxHello/linux-hello/issues/162). Amendment proposed 2026-11-17: the errors, the result and the contract of the interface (see *Amendment 2026-11-17*), the answer to [linux-hello#156](https://github.com/LinuxHello/linux-hello/issues/156); it is not accepted yet.
+Accepted, 2026-11-08, on the maintainer's decision the same day (proposed 2026-11-08). Amendment accepted 2026-11-16, on the maintainer's decision the same day: what identifies a caller (see *Amendment 2026-11-16*); it changes the *Policy* point and is the answer to [linux-hello#162](https://github.com/LinuxHello/linux-hello/issues/162). Amendment accepted 2026-11-17, on the maintainer's decision the same day (proposed 2026-11-17): the errors, the result and the contract of the interface (see *Amendment 2026-11-17*), the answer to [linux-hello#156](https://github.com/LinuxHello/linux-hello/issues/156).
 
 ## Context
 
@@ -56,7 +56,7 @@ If a later decision needs to tell the module from other processes of one uid (fo
 
 The user-visible Plasma pieces (Prompt UI, settings page) stay in the user's session and call the Agent over the system bus. Nothing here changes the interface name or version.
 
-### Amendment 2026-11-17 (proposed): errors, results and the contract of the interface
+### Amendment 2026-11-17 (accepted): errors, results and the contract of the interface
 
 The interface is a one-way door once the PAM module and the prompt component ship. Six gaps are cheap to close before they do ([linux-hello#156](https://github.com/LinuxHello/linux-hello/issues/156)). `Unsubscribe` and the `Closed` signal are built ([#203](https://github.com/LinuxHello/linux-hello/issues/203)); the rest is decided here.
 
