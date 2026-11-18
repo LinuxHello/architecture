@@ -163,9 +163,9 @@ This level opens each container and shows the pieces inside it. Each subsection 
 
 ### Agent
 
-The diagram shows the pieces of the Agent, the Linux Hello parts that call it, and the outside programs it uses: the TPM, fprintd, Howdy, Linux-PAM and the system journal.
+The diagram shows the pieces of the Agent, the Linux Hello parts that call it, and the outside programs it uses: the TPM, fprintd, Howdy, Linux-PAM, logind and the system journal.
 
-![C4 component view of the Linux Hello Agent: the D-Bus API and PIN Socket receive requests; the Method Orchestrator runs the PIN Verifier, Face Client and Fingerprint Client; the policy engine, PIN Manager, Enrolment Orchestrator and Reset Coordinator act on the TPM provider's key service; the Audit Logger writes to the journal](../diagrams/Agent.svg)
+![C4 component view of the Linux Hello Agent: the D-Bus API and PIN Socket receive requests; the Method Orchestrator runs the PIN Verifier, Face Client and Fingerprint Client; the policy engine, PIN Manager, Enrolment Orchestrator and Reset Coordinator act on the TPM provider's key service; the Credential Index lists the passkeys websites can find; the Unlock State Manager follows logind and starts and stops the virtual key; the Audit Logger writes to the journal](../diagrams/Agent.svg)
 
 Notice that only two pieces receive anything from outside the Agent: the D-Bus API and the PIN Socket. Every request passes one of them, and both check who the caller is before anything else.
 
@@ -180,7 +180,8 @@ Notice that only two pieces receive anything from outside the Agent: the D-Bus A
 | Method Orchestrator | Runs fingerprint, face and PIN at the same time for one prompt; the first success wins and the others are cancelled ([ADR-0023](../adr/0023-pam-module-and-login-failure.md)). | Not built |
 | Fingerprint Client | Asks fprintd, the Linux fingerprint service, to check a finger. | Not built |
 | Face Client | Runs Howdy, the Linux face-recognition program, and reads its answer from its exit status. | Not built |
-| Unlock State Manager | Keeps whether the user's keys are unlocked, and for how long, proven by the TPM rather than by a flag in memory. | Not built |
+| Unlock State Manager | Keeps whether the user's keys are unlocked, and for how long, proven by the TPM rather than by a flag in memory. It also follows [logind](12-glossary.md#logind), the service that knows which user's session is in front and whether it is locked, and asks the Virtual CTAP Authenticator to create the virtual key only for that user while the session is unlocked ([ADR-0025](../adr/0025-virtual-key-per-user-session.md), proposed). | Not built |
+| Credential Index | The list of passkeys a website can find without a user name ([discoverable credentials](12-glossary.md#discoverable-credential)): for each, the website, the user account, the provider and the TPM-wrapped key. It holds no private key. Its file, `index.json`, is in the Agent's state directory, and the TPM provider asks it for the wrapped key of a passkey ([spike 0120](../spikes/0120-resident-keys-presence-and-uv.md)). | Not built |
 | PIN Manager | Changes the PIN and applies the PIN rules, such as the minimum length. | Not built |
 | Enrolment Orchestrator | Leads the first setup: choose a PIN, create the root key, then offer face and fingerprint. | Not built |
 | Reset Coordinator | Carries out the destructive reset after a forgotten PIN, after checking the account password ([ADR-0003](../adr/0003-destructive-reset.md)). | Not built |
@@ -202,16 +203,15 @@ Notice that the Agent Client uses two channels: the bus for the prompt, the PIN 
 
 ### TPM Provider
 
-The diagram shows the four pieces of the TPM Credential Provider, from the interface the Virtual CTAP Authenticator calls down to the TPM.
+The diagram shows the three pieces of the TPM Credential Provider, from the interface the Virtual CTAP Authenticator calls down to the TPM.
 
-![C4 component view of the TPM Credential Provider: the Provider Interface called by the Virtual CTAP Authenticator, the Credential Index, the TPM Key Service and the TPM FFI that talks to the TPM](../diagrams/TPMProvider.svg)
+![C4 component view of the TPM Credential Provider: the Provider Interface called by the Virtual CTAP Authenticator, which asks the Agent's Credential Index for wrapped keys, the TPM Key Service and the TPM FFI that talks to the TPM](../diagrams/TPMProvider.svg)
 
 Notice that the Provider Interface checks with the Agent before it signs anything, so the provider never decides alone.
 
 | Component | What it does | State |
 | :-- | :-- | :-- |
 | Provider Interface | The calls the Virtual CTAP Authenticator makes: create a passkey, sign in with one. It knows nothing about `uhid`, so another front end could replace the authenticator ([ADR-0005](../adr/0005-provider-path.md)). | Not built |
-| Credential Index | The list of passkeys a website can find without a user name ([discoverable credentials](12-glossary.md#discoverable-credential)): for each, the website, the user account, the provider and the TPM-wrapped key. It holds no private key. The model draws it here, beside the key service that uses it; its file is kept in the Agent's state directory ([spike 0120](../spikes/0120-resident-keys-presence-and-uv.md)). | Not built |
 | TPM Key Service | Creates the root key and the keys for each website, changes the PIN without changing the keys, and signs ([spike 0011](../spikes/0011-tpm-root-key-change-auth.md)). | Not built |
 | TPM FFI | The bridge to the TPM's C library; the one module of this container allowed to use `unsafe` Rust. | Not built |
 
@@ -292,6 +292,7 @@ The model changed as experiments (spikes) answered questions. The table lists th
 | KDE's Users page cannot take other programs' entries ([spike 0010](../spikes/0010-kcm-users-extension-point.md)). | Linux Hello has its own settings page; the Users Page Entries are optional and not planned. |
 | The PIN of the root key can be changed in place if the root key is a child of another TPM key ([spike 0011](../spikes/0011-tpm-root-key-change-auth.md)). | The TPM Key Service is described that way. |
 | The test camera does not reliably deliver the colour and the infrared picture at once ([spike 0012](../spikes/0012-camera-rgb-ir-concurrent.md)). | No camera component: Howdy alone holds the infrared camera while it checks a face. |
-| Passkeys that a website finds without a user name, and the checks for presence and verification, work through a virtual key with stock browsers; one confirmation per request needs a special answer to the browser's first probe ([spike 0120](../spikes/0120-resident-keys-presence-and-uv.md)). | The Credential Index and the Prompt UI were added. |
+| Passkeys that a website finds without a user name, and the checks for presence and verification, work through a virtual key with stock browsers; one confirmation per request needs a special answer to the browser's first probe ([spike 0120](../spikes/0120-resident-keys-presence-and-uv.md)). | The Credential Index and the Prompt UI were added. The index was first drawn inside the TPM provider and moved into the Agent on 2026-11-18, because its file is in the Agent's state directory and it lists the passkeys of every provider. |
+| A virtual key that the system gives to whoever is in front on the screen can be opened by a second logged-in user; a udev rule and the Agent following logind give it to one user and one unlocked session ([spike 0138](../spikes/0138-virtual-ctap-session-binding.md), [ADR-0025](../adr/0025-virtual-key-per-user-session.md), proposed). | udev and logind were added as outside systems, with the Agent's Unlock State Manager starting and stopping the virtual key. |
 
 An earlier design, a browser extension of Linux Hello's own ([ADR-0013](../adr/0013-browser-fallback.md), replaced by [ADR-0017](../adr/0017-browser-path.md)), is not in the model: browsers use the virtual security key and there is no extension.

@@ -25,6 +25,7 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
                 faceClient = component "Face Client" "Requests a face match from Howdy" "Rust"
                 fingerClient = component "Fingerprint Client" "Requests a verify from fprintd" "zbus"
                 resetCoord = component "Reset Coordinator" "Destructive reset per ADR-0003 (LH-1)" "Rust"
+                credStore = component "Credential Index" "Resident (discoverable) credentials, in index.json in the Agent's state directory: handle (the credential ID of a resident key) to relying party, user entity, provider and TPM-wrapped key blobs; answers a get with no allow list; no private key material (spike 0120)" "Rust"
                 auditLog = component "Audit Logger" "Structured journald events for every unlock, sign, PIN change and reset" "Rust"
             }
 
@@ -35,7 +36,6 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
 
             tpmProvider = container "TPM Credential Provider" "Device-bound passkeys under the per-user TPM root key" "Rust daemon" {
                 tpmProviderApi = component "Provider Interface" "Credential operations the Virtual CTAP Authenticator calls; knows nothing about uhid, so another front end can replace it (ADR-0005)" "zbus"
-                credStore = component "Credential Index" "Resident (discoverable) credentials kept by the Agent: handle (the credential ID of a resident key) to relying party, user entity, provider and TPM-wrapped key blobs; answers a get with no allow list; no private key material (spike 0120)" "Rust"
                 tpmKeys = component "TPM Key Service" "Root key as a non-primary child of a storage primary, PIN change in place (new blob, old blob deleted), child keys, policy sessions, signing (spike 0011)" "Rust"
                 tpmFfi = component "TPM FFI" "The one module of this container allowed unsafe code; the PAM module has the other (invariant 4)" "tss-esapi"
             }
@@ -89,6 +89,8 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
         relyingParties = softwareSystem "Relying parties" "Websites and identity providers" "External"
         apparmor = softwareSystem "AppArmor" "Kernel LSM, mandatory access control" "External"
         tetragon = softwareSystem "Tetragon" "eBPF runtime security (optional)" "External"
+        udev = softwareSystem "udev" "Creates device files and sets who may open them. Linux Hello ships two rules: /dev/uhid for the uhid helper only (spike 0121), and each virtual key's hidraw file for the one user named in its uniq field, without the uaccess tag (71-lh-session-key.rules, ADR-0025, proposed)" "External"
+        logind = softwareSystem "systemd-logind" "Tracks sessions and seats: which session is in front on a seat, and whether it is locked (LockedHint)" "External"
         journald = softwareSystem "systemd-journald" "System log" "External"
         logStack = softwareSystem "Log stack" "e.g. Alloy, Loki, Grafana" "External"
         mgmt = softwareSystem "Device management" "Future: delivers admin policy, as Intune does" "External"
@@ -168,7 +170,11 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
         ctapHelper -> tpmProviderApi "Credential operations" "D-Bus"
         ctapHelper -> dbusApi "Checks unlock and routing policy" "D-Bus"
         tpmProviderApi -> dbusApi "Checks unlock and policy" "D-Bus"
-        tpmProviderApi -> credStore "Looks up credentials"
+        tpmProviderApi -> credStore "Looks up the wrapped key of a credential"
+        dbusApi -> credStore "Finds a site's passkeys for a request with no allow list, and resolves the handles in an allow list (spike 0120)"
+        unlockState -> logind "Follows which session is in front and whether it is locked (ADR-0025, proposed)" "D-Bus"
+        unlockState -> ctapHelper "Asks it to create the virtual key for the user whose session is in front and unlocked, and to remove it on lock, switch or logout (ADR-0025, proposed)"
+        udev -> ctapHelper "Applies Linux Hello's rules to the devices the helper creates: /dev/uhid for the helper only, each virtual key's hidraw file for its one owner (ADR-0025, proposed)" "udev rules"
         tpmProviderApi -> tpmKeys "Sign assertion"
         tpmKeys -> tpmFfi "ESAPI calls"
         tpmFfi -> tpm "Commands" "/dev/tpmrm0"
