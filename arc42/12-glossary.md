@@ -444,9 +444,17 @@ An implementation brief: the description of one piece of code work, written by t
 
 A way to draw software at four levels of detail: the **system** and the people and other systems around it (context), the **containers** inside it, the **components** inside each container, and the code. A *container* here means a part that runs or is stored on its own, such as a service, a library or a set of files; it has nothing to do with Docker containers. Linux Hello's C4 model is written as text in [workspace.dsl](../workspace.dsl), in the language of the Structurizr tool, and the diagrams are drawn from it.
 
+### DCO
+
+The Developer Certificate of Origin: a short statement by which the author of a commit certifies that they have the right to contribute it under the project's licence. It is given by a line `Signed-off-by:` in the commit message. An AI agent cannot give it, so the maintainer signs off the agents' commits before merging ([ADR-0004](../adr/0004-agent-roles.md)).
+
 ### Gap
 
 A section or part of a section that has no content yet. It is marked **Gap** rather than filled with guesses.
+
+### GPL, LGPL
+
+Two families of open-source licence from the Free Software Foundation. The **GPL** requires a program that includes GPL code to be released under the GPL as a whole. The **LGPL** (Lesser GPL) allows any program, under any licence, to use a library under it, as long as changes to the library itself stay open. Linux Hello is under the LGPL; KeePassXC and fprintd are under the GPL, so Linux Hello talks to them as separate programs and never includes their code ([section 2](02-constraints.md#21-licences-and-upstream)).
 
 ### Invariant
 
@@ -459,3 +467,7 @@ A short, time-boxed experiment that answers one question the design depends on, 
 ### Status words
 
 How a page says how far a part has come. **Built and tested**: it exists in the code and its tests pass. **Decided, not built**: an ADR settled it but there is no code yet. **Open**: not decided. A newcomer cannot tell a design from a working program unless the text says which it is.
+
+### Upstream
+
+The other open-source projects that Linux Hello builds on, such as fprintd, Howdy, KeePassXC and KDE Plasma. A change that one of them needs is offered to that project, not kept in a private copy ([section 2](02-constraints.md#c4-changes-to-upstream-go-upstream)).
