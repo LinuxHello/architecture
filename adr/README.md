@@ -34,7 +34,7 @@ An architecture decision record (ADR) is a short note that records one decision 
 - [ADR-0018: Where the user layer of the routing policy lives](0018-user-policy-layer.md): each user's rules are kept by the Agent and changed over D-Bus, not read from the home directory.
 - [ADR-0019: A shared memory for the coding agents](0019-shared-agent-memory.md) (proposed): a memory service for the AI agents that returns evidence with its source, never a verdict.
 - [ADR-0020: Presence and verification that a process of the same user cannot forge](0020-presence-and-verification.md) (amends ADR-0017): when a website is told that the user was present and verified.
-- [ADR-0021: How the PIN reaches the Agent and the TPM](0021-pin-transport.md) (amends ADR-0014): the PIN travels over a socket of its own, never as a D-Bus message.
+- [ADR-0021: How the PIN reaches the Agent and the TPM](0021-pin-transport.md) (amends ADR-0014): the PIN travels over a socket of its own, never as a D-Bus message; the control call that announces it is `ExpectPin(prompt_id)`.
 - [ADR-0022: Crate and package names, and what is published](0022-crate-and-package-names.md): the names stay, and nothing is published to crates.io in 1.0.
 - [ADR-0023: A thin PAM module, and what login does when Linux Hello fails](0023-pam-module-and-login-failure.md) (amends the model): the PAM module only asks the Agent, and a failure falls through to the account password.
 - [ADR-0024: The Agent's status interface](0024-agent-status-interface.md): the Agent says in words what is wrong for the caller, and shows file names to root only.
