@@ -38,5 +38,6 @@ An architecture decision record (ADR) is a short note that records one decision 
 - [ADR-0022: Crate and package names, and what is published](0022-crate-and-package-names.md): the names stay, and nothing is published to crates.io in 1.0.
 - [ADR-0023: A thin PAM module, and what login does when Linux Hello fails](0023-pam-module-and-login-failure.md) (amends the model): the PAM module only asks the Agent, and a failure falls through to the account password.
 - [ADR-0024: The Agent's status interface](0024-agent-status-interface.md): the Agent says in words what is wrong for the caller, and shows file names to root only.
+- [ADR-0025: One virtual security key per user and active session](0025-virtual-key-per-user-session.md) (proposed; amends ADR-0017): the virtual security key belongs to one user and exists only while that user's session is in front and unlocked.
 
 New ADRs start from [the template](../templates/adr.md).

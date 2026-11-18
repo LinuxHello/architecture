@@ -176,6 +176,10 @@ The message system that programs on a Linux desktop use to call each other. Ther
 
 A desktop program built from web technology, with its own copy of Chromium inside, such as Slack, Visual Studio Code or Claude Desktop. It signs the user in through a browser window or the system browser, so it uses passkeys in the same way.
 
+### Fast user switching
+
+Being logged in as several users on the same computer at once: Alice locks her screen, Bob signs in, and Alice's programs keep running in the background until she switches back. Only the session in front can use the screen, keyboard and mouse. Linux Hello gives its virtual security key only to the user whose session is in front and unlocked, so that Bob cannot use a key Alice unlocked ([ADR-0025](../adr/0025-virtual-key-per-user-session.md)).
+
 ### fprintd
 
 The Linux service that reads fingerprint sensors and matches a finger against the fingerprints a user has enrolled. Linux Hello asks it for a match; the fingerprint pictures stay in fprintd and are never copied.
