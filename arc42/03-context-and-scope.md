@@ -72,7 +72,7 @@ The table groups the outside programs by what they do for Linux Hello. "Needed" 
 | [Tetragon](12-glossary.md#tetragon) | A monitor that watches the kernel for suspicious actions | Reports, for example, any program other than Linux Hello opening the TPM | Optional |
 | Log stack | A log collector and viewer, for example Alloy, Loki and Grafana | Collects the audit records and Tetragon's reports and raises alerts | Optional |
 | Device management | A service that configures many computers centrally, as Microsoft's Intune does for Windows | Would deliver the administrator's policy files. Future | Optional |
-| [Secret Service](12-glossary.md#secret-service) ([KWallet](12-glossary.md#kwallet)) | The Linux store for passwords and login tokens | Linux Hello does not use it. Apps keep there the login tokens that a passkey sign-in gives them, which matters for the token problem in [section 4](04-solution-strategy.md#token-reissue-the-claude-desktop-case) | — |
+| [Secret Service](12-glossary.md#secret-service) ([KWallet](12-glossary.md#kwallet)) | The Linux store for passwords and login tokens | Linux Hello does not use it. Apps keep there the login tokens that a passkey sign-in gives them, which matters for the token problem in [section 4](04-solution-strategy.md#44-signing-in-again-without-the-user) | — |
 
 ## 3.2 Technical context
 

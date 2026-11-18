@@ -30,7 +30,7 @@ Accepted, 2026-11-08, on the maintainer's decision the same day (proposed 2026-1
 
 ## Decision
 
-**Option A for 1.0.** Linux Hello does not ship a browser extension or native-messaging host in 1.0. The Virtual CTAP Authenticator ([workspace.dsl](../workspace.dsl)) is the browser path, and design rule 4 in [section 4](../arc42/04-solution-strategy.md#design-rules) already says so.
+**Option A for 1.0.** Linux Hello does not ship a browser extension or native-messaging host in 1.0. The Virtual CTAP Authenticator ([workspace.dsl](../workspace.dsl)) is the browser path, and design rule 4 in [section 4](../arc42/04-solution-strategy.md#43-design-rules) already says so.
 
 1. **Build before release** (each needs a security property and a test named after it): resident keys through the Credential Index, `getInfo` options for user verification, a presence and verification prompt for every request through the Prompt UI (nothing signs without one), one signature per request even when a browser asks twice.
 2. **Verify before release:** Chrome stable and the distribution Firefox, including Snap and Flatpak access to `hidraw`; a real relying party; a hardware TPM.
