@@ -2,7 +2,7 @@
 type: adr
 subject: Structure the architecture documentation by the Arc42 template
 artifact: adr
-status: proposed
+status: accepted
 owner: "@atterdag"
 concepts: [arc42, c4, documentation, governance]
 tags: [adr, architecture, docs]
@@ -14,7 +14,7 @@ date: 2026-11-05
 
 ## Status
 
-Proposed, 2026-11-05. [ADR-0011](0011-architecture-repository.md) (accepted) moves the Arc42 sections, `workspace.dsl`, the ADRs and the spikes to `LinuxHello/linux-hello-architecture`; the structure decided here stays.
+Accepted, 2026-11-18, on the maintainer's decision (proposed 2026-11-05). [ADR-0011](0011-architecture-repository.md) (accepted) moves the Arc42 sections, `workspace.dsl`, the ADRs and the spikes to `LinuxHello/linux-hello-architecture`; the structure decided here stays.
 
 ## Context
 

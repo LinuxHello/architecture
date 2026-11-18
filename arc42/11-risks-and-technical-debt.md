@@ -63,7 +63,6 @@ The ratings come from two places. Risks recorded as issues in the code repositor
 | Part of the confinement checks still runs by hand from the maintainer's private repository | They were first written for a test virtual machine | Run all of them in CI ([linux-hello#149](https://github.com/LinuxHello/linux-hello/issues/149); the first part runs there since [linux-hello#239](https://github.com/LinuxHello/linux-hello/pull/239)) |
 | The policy engine reads and parses every policy file for each decision | Simple and correct first | Keep the effective policy in memory and reload it when a file changes ([linux-hello#151](https://github.com/LinuxHello/linux-hello/issues/151)) |
 | The amendment of [ADR-0018](../adr/0018-user-policy-layer.md) of 2026-11-10 is still proposed, but the code already follows it | The code needed the rule before the decision was formally taken | Accept the amendment, or change the code |
-| [ADR-0008](../adr/0008-code-documentation-mapped-to-c4.md) and [ADR-0010](../adr/0010-arc42-architecture-documentation.md) are still proposed, although the project already works by them: the code names its C4 parts and CI checks them, and these notes follow Arc42 | They were never formally accepted | Accept them, or record why not |
 
 ## Questions answered earlier
 
