@@ -14,7 +14,7 @@ date: 2026-11-15
 
 ## Status
 
-Accepted, 2026-11-15, on the maintainer's decision the same day (proposed 2026-11-15). Amends [ADR-0014](0014-agent-bus.md) for the PIN only. Answers [issue 140](https://github.com/LinuxHello/linux-hello/issues/140). The maintainer chose the dedicated Agent socket (option A below) and accepted decisions 2 to 5 as written.
+Accepted, 2026-11-15, on the maintainer's decision the same day (proposed 2026-11-15). Amends [ADR-0014](0014-agent-bus.md) for the PIN only. Answers [issue 140](https://github.com/LinuxHello/linux-hello/issues/140). The maintainer chose the dedicated Agent socket (option A below) and accepted decisions 2 to 5 as written. Amendment accepted 2026-11-18, on the maintainer's decision the same day (proposed 2026-11-18): the control call is `ExpectPin(prompt_id)` (see *Amendment 2026-11-18*).
 
 ## Context
 
@@ -35,6 +35,22 @@ Only the Agent and the TPM provider may open the TPM, and the PAM module verifie
 4. **Memory hygiene.** `zeroize` on every buffer that holds the PIN or the stretched value; no secret type implements `Debug`; core dumps are disabled for the Agent (the hardening issue).
 5. **The PIN is checked only by the TPM** (P-12), and the Agent throttles first (the per-user counter of [#137](https://github.com/LinuxHello/linux-hello/issues/137)).
 6. **Names the tests will use** (properties in `docs/security/properties.md`, written in the code issues after this ADR is accepted): `pin_is_never_a_dbus_message_body`, `tpm_sessions_encrypt_the_authorisation_value`, `pin_buffers_are_cleared_after_use`. P-12 keeps its existing test, `pin_is_never_compared_outside_the_tpm`.
+
+### Amendment 2026-11-18 (accepted): the control call is `ExpectPin(prompt_id)`
+
+Decision 1 says the Agent accepts a PIN on its socket only from the process that made "the control call on the bus" and only for the subject that call named. It did not name the call. This amendment does, because a method name and signature shipped to clients cannot be taken back (AGENTS.md, invariant 7).
+
+In plain words: before a program sends a PIN on the socket, it tells the Agent over the bus "I am about to send one, for this prompt". The Agent writes down who asked and for whom, and then lets exactly that program send exactly one PIN within a short time. Anyone else who connects to the socket is turned away.
+
+1. **The method.** `ExpectPin(s prompt_id)` on `io.github.LinuxHello.Agent1`. It returns nothing. Success means the Agent now expects one PIN from this caller.
+2. **Who may call it, and for whom.** Only the process that opened the prompt (the same rule as `ReportState` and `ClosePrompt`, [ADR-0014](0014-agent-bus.md)). The subject is the user the prompt is for, which `OpenPrompt` recorded, so the caller does not name a user number and cannot name one it was not given. Because `OpenPrompt` already lets only root or the subject open a prompt for a user, a PIN for a user can come only from that user or from root.
+3. **What is recorded.** The caller's user id and process id as the bus reports them, and the subject, in the table of `PinSocket::expect`. The PIN is accepted from a connection whose kernel-reported user id and process id match, once, within 30 seconds (`EXPECTATION_TTL`). A second call by the same process replaces the first.
+4. **Errors**, from the closed set of ADR-0014: `Denied` for a prompt that is not the caller's, one that does not exist, and a caller whose process id the bus cannot report (the same fixed text for all three, so the answer reveals nothing about other users' prompts); `InvalidArgument` for a malformed id; `LimitReached` when 64 callers already wait; `Unavailable` when the Agent's PIN socket is not running.
+5. **Version.** `ExpectPin` is a new optional member, an additive change under the rule of the ADR-0014 amendment of 2026-11-17: it is listed by `GetCapabilities`, and a client that does not find it there does not send a PIN this way.
+6. **No PIN in the call.** The call carries a prompt identifier and nothing secret; `pin_is_never_a_dbus_message_body` still holds, and its list of forbidden words does not need `ExpectPin` (the word is `Pin` inside a name, so the test names this one method as it does `GetPinRules`).
+7. **Tests the code will name:** `a_pin_is_accepted_only_after_expect_pin_by_the_prompt_opener`, `expect_pin_for_another_users_prompt_is_denied`, `expect_pin_is_listed_in_capabilities`, and the existing tests of the socket.
+
+Not decided here: what consumes the PIN (the verifier and the stretching of decision 2).
 
 ## Consequences
 
