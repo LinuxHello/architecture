@@ -172,7 +172,7 @@ Notice that only two pieces receive anything from outside the Agent: the D-Bus A
 | Component | What it does | State |
 | :-- | :-- | :-- |
 | D-Bus API | Receives every call on the bus, reads the caller's user number from the bus itself and refuses a caller it cannot identify, and keeps the state per user so that no answer names another user ([ADR-0014](../adr/0014-agent-bus.md)). | Built |
-| Auth State Publisher | Tells the program that opened a prompt which methods are available, which one is running, and the result, by the signals `MethodsAvailable`, `ActiveMethod`, `State`, `Result` and `Closed`. | Built |
+| Auth State Publisher | Tells the program that opened a prompt which methods are available, which ones are running, and the result with its reason and the seconds to wait, by the signals `MethodsAvailable`, `ActiveMethods`, `State`, `Result` and `Closed`. | Built |
 | Routing Policy Engine | Merges the defaults, the user layer and the admin layer and answers which methods and which provider are allowed for a sign-in, a website or a `sudo` call. Falls back to the PIN-only state when a file cannot be trusted. | Built; no call answers from it yet |
 | Audit Logger | Writes one entry to the system journal for every refused request and every change of a user's policy. A PIN or a text the caller sent can never reach it. | Built |
 | PIN Socket | A local socket of the Agent that accepts one thing, a PIN, and asks the kernel which user and process sent it (with [`SO_PEERCRED`](12-glossary.md#so_peercred)), so a sender cannot lie about who it is ([ADR-0021](../adr/0021-pin-transport.md)). | Code, not in use |

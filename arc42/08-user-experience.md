@@ -46,7 +46,7 @@ So Linux Hello adds a second channel beside PAM. The PAM module only opens a *pr
 
 The login screen and the Prompt UI draw from that state through one shared QML component, the *Auth Prompt*, which is why they look alike (UX5). Every prompt has an identifier that the PAM module and the screen work out independently, because PAM's text channel cannot carry it. The Agent sends the state only to the user the prompt belongs to, by method reply or by a signal addressed to that user, never broadcast to everyone ([ADR-0014](../adr/0014-agent-bus.md)). The lock screen on Plasma 6.8 and later shows the text of KDE's own face and fingerprint services instead ([ADR-0016](../adr/0016-prompt-hosts.md)).
 
-*State:* the Agent's calls for opening and following a prompt, and the signals `MethodsAvailable`, `ActiveMethod`, `State`, `Result` and `Closed`, are built and tested. The amendment of [ADR-0014](../adr/0014-agent-bus.md) of 2026-11-17 decided that `ActiveMethod` becomes the list `ActiveMethods` and that `Result` carries a reason and a waiting time; that change is not built yet. Running the methods, the PAM module and the Auth Prompt are not built.
+*State:* the Agent's calls for opening and following a prompt, and the signals `MethodsAvailable`, `ActiveMethods`, `State`, `Result` and `Closed`, are built and tested. `ActiveMethods` is the list of methods running now, and `Result` carries a reason and a waiting time, as the amendment of [ADR-0014](../adr/0014-agent-bus.md) of 2026-11-17 decided. Running the methods, the PAM module and the Auth Prompt are not built.
 
 ## Setting up the methods
 
