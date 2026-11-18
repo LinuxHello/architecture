@@ -87,12 +87,12 @@ These ADRs decide how Linux Hello is built, licensed and documented, rather than
 | [ADR-0007](../adr/0007-unattended-agent-loops.md) | The AI agents may run in loops without a person at the keyboard, sharing state only through GitHub issues and their labels. | proposed |
 | [ADR-0019](../adr/0019-shared-agent-memory.md) | A memory service for the AI agents, which returns evidence with where it came from and never a verdict. | proposed |
 | [ADR-0009](../adr/0009-self-hosted-runner.md) | The maintainer's workstation runs some CI jobs, none of them required and none signing anything. | proposed |
-| [ADR-0006](../adr/0006-attested-quality-gates-and-releases.md) | Which CI checks every commit must pass, and how releases are signed and proven to come from reviewed code. | proposed |
-| [ADR-0008](../adr/0008-code-documentation-mapped-to-c4.md) | Every piece of code is documented and names the part of the C4 model it implements. Amended on 2026-11-05 to publish the code documentation with generated diagrams. | proposed |
-| [ADR-0010](../adr/0010-arc42-architecture-documentation.md) | The architecture documentation follows the twelve sections of the Arc42 template. | proposed |
+| [ADR-0006](../adr/0006-attested-quality-gates-and-releases.md) | Which CI checks every commit must pass, and how releases are signed and proven to come from reviewed code. | accepted |
+| [ADR-0008](../adr/0008-code-documentation-mapped-to-c4.md) | Every piece of code is documented and names the part of the C4 model it implements. Amended on 2026-11-05 to publish the code documentation with generated diagrams. | accepted |
+| [ADR-0010](../adr/0010-arc42-architecture-documentation.md) | The architecture documentation follows the twelve sections of the Arc42 template. | accepted |
 | [ADR-0011](../adr/0011-architecture-repository.md) | The architecture documentation and the ADRs live in this repository, separate from the code. | accepted |
 
-Three of the proposed ADRs, 0006, 0008 and 0010, describe how things are already done: the CI checks run, the code names its C4 parts, and this documentation follows Arc42. They are proposed because the maintainer has not yet decided on them, not because they are unused.
+ADR-0006, ADR-0008 and ADR-0010 describe how the project already worked when they were accepted on 2026-11-18: the CI checks run, the code names its C4 parts, and this documentation follows Arc42.
 
 ## 9.4 Writing a new ADR
 

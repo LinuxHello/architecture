@@ -2,7 +2,7 @@
 type: adr
 subject: Attested quality gates, fuzzing, SBOMs and signed releases
 artifact: adr
-status: proposed
+status: accepted
 owner: "@atterdag"
 concepts: [supply-chain, governance, ci, fuzzing]
 tags: [adr, ci, security, release]
@@ -14,7 +14,7 @@ date: 2026-11-08
 
 ## Status
 
-Proposed, 2026-11-03.
+Accepted, 2026-11-18, on the maintainer's decision (proposed 2026-11-03).
 
 ## Context
 

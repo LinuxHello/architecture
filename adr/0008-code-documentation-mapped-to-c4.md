@@ -2,7 +2,7 @@
 type: adr
 subject: Every Rust item is documented, and the code names the C4 element it implements
 artifact: adr
-status: proposed
+status: accepted
 owner: "@atterdag"
 concepts: [governance, documentation, c4-model, ai-assisted-development]
 tags: [adr, documentation, ci]
@@ -14,7 +14,7 @@ date: 2026-11-04
 
 ## Status
 
-Proposed, 2026-11-04. [ADR-0011](0011-architecture-repository.md) (accepted) moves `workspace.dsl` to `LinuxHello/linux-hello-architecture`, pinned here as a submodule; the rules of this ADR stay. Amended 2026-11-05: generated code-level diagrams and published rustdoc (see *Amendment 2026-11-05*).
+Accepted, 2026-11-18, on the maintainer's decision (proposed 2026-11-04). [ADR-0011](0011-architecture-repository.md) (accepted) moves `workspace.dsl` to `LinuxHello/linux-hello-architecture`, pinned here as a submodule; the rules of this ADR stay. Amended 2026-11-05: generated code-level diagrams and published rustdoc (see *Amendment 2026-11-05*).
 
 ## Context
 
