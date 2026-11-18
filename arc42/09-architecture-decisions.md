@@ -49,6 +49,7 @@ These ADRs decide how Linux Hello works. Each row says in one sentence what the 
 | [ADR-0017](../adr/0017-browser-path.md) | In version 1.0 browsers reach Linux Hello only through that virtual security key; Linux Hello ships no browser extension. | accepted |
 | [ADR-0013](../adr/0013-browser-fallback.md) | An earlier plan for a browser extension of Linux Hello's own. | superseded by ADR-0017 |
 | [ADR-0020](../adr/0020-presence-and-verification.md) | A website is told the user was present only after a gesture another program cannot fake, and told the user was verified only for a check made for this request or at most 60 seconds before it. Amends ADR-0017. | accepted |
+| [ADR-0025](../adr/0025-virtual-key-per-user-session.md) | The virtual security key belongs to one user, and exists only while that user's session is in front and unlocked, so that a second person logged in on the same computer cannot use it. Amends ADR-0017. | proposed |
 
 **The Agent and how programs talk to it**
 
