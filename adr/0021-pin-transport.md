@@ -14,7 +14,7 @@ date: 2026-11-15
 
 ## Status
 
-Accepted, 2026-11-15, on the maintainer's decision the same day (proposed 2026-11-15). Amends [ADR-0014](0014-agent-bus.md) for the PIN only. Answers [issue 140](https://github.com/LinuxHello/linux-hello/issues/140). The maintainer chose the dedicated Agent socket (option A below) and accepted decisions 2 to 5 as written. Amendment accepted 2026-11-18, on the maintainer's decision the same day (proposed 2026-11-18): the control call is `ExpectPin(prompt_id)` (see *Amendment 2026-11-18*).
+Accepted, 2026-11-15, on the maintainer's decision the same day (proposed 2026-11-15). Amends [ADR-0014](0014-agent-bus.md) for the PIN only. Answers [issue 140](https://github.com/LinuxHello/linux-hello/issues/140). The maintainer chose the dedicated Agent socket (option A below) and accepted decisions 2 to 5 as written. Amendment accepted 2026-11-18, on the maintainer's decision the same day (proposed 2026-11-18): the control call is `ExpectPin(prompt_id)` (see *Amendment 2026-11-18*). Amendment accepted 2026-11-19, on the maintainer's standing approval of the lead's recommendations (proposed 2026-11-19): the parameters of the PIN stretching (see *Amendment 2026-11-19*).
 
 ## Context
 
@@ -51,6 +51,21 @@ In plain words: before a program sends a PIN on the socket, it tells the Agent o
 7. **Tests the code will name:** `a_pin_is_accepted_only_after_expect_pin_by_the_prompt_opener`, `expect_pin_for_another_users_prompt_is_denied`, `expect_pin_is_listed_in_capabilities`, and the existing tests of the socket.
 
 Not decided here: what consumes the PIN (the verifier and the stretching of decision 2).
+
+### Amendment 2026-11-19 (accepted): the PIN stretching, exactly
+
+Decision 2 said the TPM gets a stretched PIN and left "the function and its cost" to a follow-up brief. This amendment fixes them, because every root key created with them can only be opened with them (changing them later means a PIN change).
+
+In plain words: the PIN you type is turned into a 32-byte value by a slow, memory-hungry function, and only that value is ever given to the TPM. "Slow" is the point: someone who captured it cannot try a million PINs a second.
+
+1. **Normalisation.** The PIN must be UTF-8 text and not empty. It is normalised to Unicode NFKC, so that the same PIN typed on two keyboards is the same bytes (full-width digits equal ordinary digits, a composed letter equals a letter with a combining accent). The normal form is kept in a fixed buffer of 4 KiB that is wiped and never grows; a PIN whose normal form is longer is refused.
+2. **The function.** Argon2id, version 1.3 (RFC 9106), 32 bytes of output, with a **16-byte random salt per user**, kept with the user's root-key record. The 32 bytes are the authorisation value of the root key (a SHA-256 name algorithm accepts that length).
+3. **The cost.** 64 MiB of memory, 3 passes, 1 lane. Measured at about 112 milliseconds per PIN on a development workstation (release build). The budget is a tenth of a second on a laptop and not more than a quarter on a slow one; it is measured again on target hardware before 1.0, and the parameters can be raised then.
+4. **The parameters travel with the record.** The root-key record stores the memory, passes and lanes it was created with, and a version number of this scheme. A PIN change may write stronger ones. A record whose parameters are below 16 MiB and 2 passes, or above 1 GiB, 16 passes and 8 lanes, is **refused**, not trusted: a damaged or forged record must not make the stretching trivial, nor make the Agent allocate gigabytes.
+5. **Memory.** The stretched value and the normal form are wiped when dropped, have no `Debug`, and the memory of Argon2 is wiped after use (`pin_buffers_are_cleared_after_use`).
+6. **Tests the code names:** `the_crate_matches_rfc_9106`, `the_result_for_a_known_input_does_not_change`, `equivalent_texts_are_the_same_pin`, `parameters_outside_the_accepted_range_are_refused_before_any_work`, `a_normal_form_that_does_not_fit_is_refused`.
+
+Not decided here: how the salt and the parameters are stored with the root-key blob (the TPM provider's record format), and the TPM sessions of decision 3.
 
 ## Consequences
 
