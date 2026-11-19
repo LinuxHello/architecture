@@ -14,7 +14,7 @@ date: 2026-11-15
 
 ## Status
 
-Accepted, 2026-11-15, on the maintainer's decision the same day (proposed 2026-11-15). Amends the `Method Orchestrator` component in [workspace.dsl](../workspace.dsl), which sits inside `pam_linuxhello`. Answers [issue 147](https://github.com/LinuxHello/linux-hello/issues/147); builds on [ADR-0014](0014-agent-bus.md) and [spike 0007](../spikes/0007-pam-dbus-method-state.md).
+Accepted, 2026-11-15, on the maintainer's decision the same day (proposed 2026-11-15). Amends the `Method Orchestrator` component in [workspace.dsl](../workspace.dsl), which sits inside `pam_linuxhello`. Answers [issue 147](https://github.com/LinuxHello/linux-hello/issues/147); builds on [ADR-0014](0014-agent-bus.md) and [spike 0007](../spikes/0007-pam-dbus-method-state.md). Amendment accepted 2026-11-19, on the maintainer's decision the same day (proposed 2026-11-19): the method that hands the conversation to the Agent is `Authenticate(prompt_id, context)` (see *Amendment 2026-11-19*).
 
 ## Context
 
@@ -38,6 +38,23 @@ The model has `pam_linuxhello` run face, fingerprint and PIN in parallel itself,
 2. **Failure contract.** When Linux Hello is unavailable (the Agent is unreachable or hangs, its profile is not enforcing, the TPM is locked, a context is unsatisfiable) the module returns `PAM_AUTHINFO_UNAVAIL`. It never returns `PAM_SUCCESS` for that case (P-20). The shipped PAM snippets keep `pam_unix` after `pam_linuxhello`, so the account password still works for login, unlock and `sudo`. The account password never unlocks TPM keys (P-17): a login by password leaves passkeys and keys locked.
 3. **Deadlines.** The connection to the Agent has a limit of 250 ms. The whole conversation is bounded by policy. When either is reached the module returns `PAM_AUTHINFO_UNAVAIL`, not an error that stops the stack.
 4. **Names the tests will use** (properties in `docs/security/properties.md`, written in the code issues after this ADR): `pam_returns_within_its_deadline_when_the_agent_hangs`, `login_falls_through_to_the_account_password_when_linux_hello_is_unavailable`. P-20 keeps its test, `pam_never_succeeds_when_agent_is_unreachable`.
+
+### Amendment 2026-11-19 (accepted): the method that starts an authentication is `Authenticate(prompt_id, context)`
+
+Decision 1 says the module "hands the conversation to the orchestrator in the Agent over the system bus" and does not name the call. A method name and signature shipped to clients cannot be taken back (AGENTS.md, invariant 7), so this amendment names it.
+
+In plain words: the PAM module first opens a prompt, as it does today. When it is ready it calls `Authenticate` once. From then on the Agent runs the methods (face, fingerprint, PIN) side by side, and the module learns what happens the way every client does: from the `ActiveMethods`, `State` and `Result` signals and from `GetState`. The call itself returns at once; it does not wait for the user.
+
+1. **The method.** `Authenticate(s prompt_id, s context)` on `io.github.LinuxHello.Agent1`. It returns nothing. Success means the Agent has started the authentication for the prompt; the outcome arrives as the `Result` signal and in `GetState` (ADR-0014, amendment 2026-11-17, point 4).
+2. **Who may call it.** Only the process that opened the prompt, the same rule as `ReportState`, `ClosePrompt` and `ExpectPin` ([ADR-0021](0021-pin-transport.md)). The user being authenticated is the prompt's subject; the caller names no user.
+3. **The context.** One of `login`, `unlock`, `sudo` and `session`, the four contexts of the policy schema. The Agent asks the policy of the prompt's subject which methods that context allows and how many must succeed. Any other text is `InvalidArgument`.
+4. **One at a time.** A second call for a prompt whose authentication is still running is refused with `LimitReached`. After `Result` the prompt can be authenticated again.
+5. **Errors**, from the closed set of ADR-0014: `Denied` for a prompt that is not the caller's, one that does not exist and one with no subject (one fixed text for all, so nothing is told about other users' prompts); `InvalidArgument` for a malformed id or an unknown context; `LimitReached` as above; `Unavailable` when the Agent has no orchestrator running.
+6. **Version.** `Authenticate` is a new optional member, an additive change under the rule of the ADR-0014 amendment of 2026-11-17: it is listed by `GetCapabilities`.
+7. **The deadline.** The module's wait is bounded by policy as in decision 3; when it gives up it calls `ClosePrompt`, which cancels the methods that are still running.
+8. **Tests the code will name:** `authenticate_starts_the_methods_of_the_context`, `authenticate_for_another_users_prompt_is_denied`, `a_second_authenticate_is_refused_while_one_runs`, `authenticate_is_listed_in_capabilities`.
+
+Not decided here: how Howdy is run, how a PIN is checked, and what `factors` above 1 does; they are open on [linux-hello#195](https://github.com/LinuxHello/linux-hello/issues/195).
 
 ## Consequences
 
