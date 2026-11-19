@@ -14,7 +14,7 @@ date: 2026-11-15
 
 ## Status
 
-Accepted, 2026-11-15, on the maintainer's decision the same day (proposed 2026-11-15). Amends the `Method Orchestrator` component in [workspace.dsl](../workspace.dsl), which sits inside `pam_linuxhello`. Answers [issue 147](https://github.com/LinuxHello/linux-hello/issues/147); builds on [ADR-0014](0014-agent-bus.md) and [spike 0007](../spikes/0007-pam-dbus-method-state.md). Amendment accepted 2026-11-19, on the maintainer's decision the same day (proposed 2026-11-19): the method that hands the conversation to the Agent is `Authenticate(prompt_id, context)` (see *Amendment 2026-11-19*).
+Accepted, 2026-11-15, on the maintainer's decision the same day (proposed 2026-11-15). Amends the `Method Orchestrator` component in [workspace.dsl](../workspace.dsl), which sits inside `pam_linuxhello`. Answers [issue 147](https://github.com/LinuxHello/linux-hello/issues/147); builds on [ADR-0014](0014-agent-bus.md) and [spike 0007](../spikes/0007-pam-dbus-method-state.md). Amendment accepted 2026-11-19, on the maintainer's decision the same day (proposed 2026-11-19): the method that hands the conversation to the Agent is `Authenticate(prompt_id, context)` (see *Amendment 2026-11-19*). The second part of the same amendment accepted 2026-11-19: how the fingerprint, face and PIN methods run and what more than one factor does (see *Amendment 2026-11-19, second part*).
 
 ## Context
 
@@ -55,6 +55,19 @@ In plain words: the PAM module first opens a prompt, as it does today. When it i
 8. **Tests the code will name:** `authenticate_starts_the_methods_of_the_context`, `authenticate_for_another_users_prompt_is_denied`, `a_second_authenticate_is_refused_while_one_runs`, `authenticate_is_listed_in_capabilities`.
 
 Not decided here: how Howdy is run, how a PIN is checked, and what `factors` above 1 does; they are open on [linux-hello#195](https://github.com/LinuxHello/linux-hello/issues/195).
+
+### Amendment 2026-11-19, second part (accepted): how the methods run
+
+[linux-hello#195](https://github.com/LinuxHello/linux-hello/issues/195) left four questions open about what the Agent's orchestrator runs. The maintainer accepted the recommended answers on 2026-11-19.
+
+In plain words: the orchestrator runs three kinds of method. Each is a small program part with two jobs, "try to recognise this user" and "stop now". This section says how each of the three does that job and what happens when a policy asks for more than one.
+
+1. **Fingerprint** (decision D5). The Agent is a client of `fprintd`, the fingerprint service every Linux desktop already has (bus name `net.reactivated.Fprint`). It takes the default device, claims it for the user being authenticated, starts a verification, and reads the service's `VerifyStatus` signal. A match is success; `verify-no-match` is a failure with the reason `not-recognised`; the retry results (`verify-retry-scan`, `verify-swipe-too-short`, `verify-finger-not-centered`, `verify-remove-and-retry`) keep the scan going; `verify-disconnected` and `verify-unknown-error` mean the method is unavailable. To cancel, the Agent stops the verification and releases the device. The service must let the Agent's own user claim a device for someone else: a polkit rule for the `linuxhello` user ships with the Agent and allows exactly that and nothing wider.
+2. **Face** (decision D2). Howdy has no bus interface, so the Agent starts it as a **child process** with a fixed command line (the compare script that Howdy's own PAM module runs, for the user being authenticated) and reads its exit code: 0 is success, 10 means the user has no face model (the method is unavailable), 11 means no match before its own timeout (a failure, `not-recognised`), 12 means it was aborted, anything else is unavailable. The child runs under its **own AppArmor profile**, a child of the Agent's, that allows the camera device and Howdy's own files and nothing else (no network, no home directory). To cancel, the Agent ends the child. Howdy's exit codes are those of the wrapper at the time of writing; the first implementation checks them against the installed version and the tests pin them.
+3. **PIN** (decision D4). The Agent never compares a PIN itself. It asks the PIN lock whether the user may try ([#180](https://github.com/LinuxHello/linux-hello/issues/180)), then hands the PIN, which arrived on the PIN socket ([ADR-0021](0021-pin-transport.md)), to the verifier that stretches it and checks it against the TPM. Until the verifier exists the PIN method reports itself unavailable.
+4. **More than one factor** (decision D3). When a policy asks for two factors, the orchestrator runs the methods one after the other, each of a different kind, and all of them must succeed; the first success of the first kind does not end the attempt. With one factor (the default of every context) methods still run side by side and the first success wins.
+
+Not decided here: the exact polkit rule text and the AppArmor profile of the child; both are written in the code issues and tested on a real machine.
 
 ## Consequences
 
