@@ -67,6 +67,23 @@ In plain words: the PIN you type is turned into a 32-byte value by a slow, memor
 
 Not decided here: how the salt and the parameters are stored with the root-key blob (the TPM provider's record format), and the TPM sessions of decision 3.
 
+### Amendment 2026-11-20 (accepted): setting and changing a PIN are `SetPin(prompt_id)` and `ChangePin(prompt_id)`
+
+Until now a PIN could only be checked. Nothing in the bus let a person set the first one or change it, and a method name shipped to clients cannot be taken back (AGENTS.md, invariant 7), so this amendment names the two calls and fixes how they work.
+
+In plain words: setting a PIN works like signing in. The program that asks (the settings page or the command line) opens a prompt for the user, says "this prompt is for setting a PIN" with `SetPin`, announces each PIN with `ExpectPin` and sends it on the PIN socket, exactly as for a sign-in. The Agent stretches the PIN, has the TPM make the user's root key, and reports success or failure the way a sign-in does, through the prompt's `Result` signal. Nothing new waits on the bus, and no PIN is ever a message body.
+
+1. **The methods.** `SetPin(s prompt_id)` and `ChangePin(s prompt_id)` on `io.github.LinuxHello.Agent1`. Both return nothing at once. Success of the call means the Agent has started and now waits for PINs; the outcome arrives as the `Result` signal of the prompt (`success` or `failure`) and in `GetState`, as for `Authenticate`.
+2. **The PINs, in order.** `SetPin` takes one PIN, the new one. `ChangePin` takes two: the current PIN first, then the new one. The caller announces each with its own `ExpectPin(prompt_id)` and sends it on the socket, within the 30 seconds of the socket's rules. Asking the person to type the new PIN twice and comparing the two is the client's job, before it sends anything.
+3. **Who may call, and for whom.** Only the process that opened the prompt, as for `ExpectPin`, and only for the user the caller is. Root may not set or change another user's PIN: the PIN is that user's secret, and what an administrator can do is reset the user's enrolment ([ADR-0003](0003-destructive-reset.md)). A call for another user's prompt is `Denied`, with the same fixed text as elsewhere.
+4. **Refusals.** From the closed set of ADR-0014: `InvalidArgument` for a malformed id, and for `SetPin` when the user already has a PIN (the fixed text says to use `ChangePin`); `Denied` as in point 3; `Unavailable` when the PIN socket, the provider or the TPM is not there. A PIN that breaks the rules of `GetPinRules` (too short, too long, not text) ends the prompt in `failure` with a reason the client can show, and nothing is written.
+5. **A wrong current PIN counts.** In `ChangePin` the current PIN goes through the same per-user counter as a sign-in (decision 5): it is counted first, can lock the user out, and is refused while the user is locked. A wrong current PIN ends the prompt in `failure` and changes nothing.
+6. **What happens to the key.** `SetPin` makes the root key (the provider's `Enrol`) and stores the record with a fresh salt; `ChangePin` changes the authorisation of the existing key in place and writes a new salt (the provider's `ChangeAuth`, [spike 0011](../spikes/0011-tpm-root-key-change-auth.md)). The record is replaced only after the TPM has changed the key, so a failure in between leaves the old PIN working.
+7. **Version.** Both are new optional members, additive under the ADR-0014 amendment of 2026-11-17, and both appear in `GetCapabilities`.
+8. **Tests the code will name:** `set_pin_enrols_the_user_and_the_pin_then_signs_in`, `set_pin_twice_is_refused`, `change_pin_with_a_wrong_current_pin_changes_nothing_and_counts`, `change_pin_while_locked_is_refused`, `a_pin_for_another_user_is_never_set`, `set_pin_and_change_pin_are_listed_in_capabilities`.
+
+Not decided here: the command and the settings page that call these, and the reset of ADR-0003 that removes the record.
+
 ## Consequences
 
 **Easier:** the PIN is out of the bus daemon's reach, logs and buffers; one place checks the caller and the subject.
