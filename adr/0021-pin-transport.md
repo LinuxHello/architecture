@@ -84,6 +84,21 @@ In plain words: setting a PIN works like signing in. The program that asks (the 
 
 Not decided here: the command and the settings page that call these, and the reset of ADR-0003 that removes the record.
 
+### Amendment 2026-11-20 (accepted): the PIN history
+
+The policy has a key `pin.history`: how many earlier PINs a person may not use again. Without it a person told to change their PIN can "change" it back to the old one. Enforcing it needs the Agent to remember something about the earlier PINs, and what it remembers is stored data in a format that later versions must read, so this amendment fixes it.
+
+In plain words: when a PIN is changed, the Agent keeps a fingerprint of the PIN that was just replaced, made with the same slow function as the PIN itself but with a salt of its own. The next time the PIN is changed, the new PIN is stretched with each remembered salt and compared with the fingerprints, and refused when it matches one. The fingerprints cannot be used to open anything, and finding the PIN behind one is as slow as guessing a PIN against the TPM's own key material offline would be.
+
+1. **What may not be reused.** The current PIN and the last `pin.history` PINs that were replaced. With `pin.history = 0` nothing is remembered and only the current PIN is refused.
+2. **What is stored.** In the user's record (`pin-root.toml`), a list of entries, newest first, each with its own random 16-byte salt and the Argon2id result (32 bytes) of the PIN with that salt and the cost the record then used. The salt of an entry is **never the salt of a root key**, so an entry is not the authorisation value of any key, present or past. An older record without the list is read as an empty history, and a record with a malformed entry is refused as untrusted, as every other malformed field is.
+3. **How many.** At most 24 entries, whatever the policy says, so that a record stays small and a change stays quick: each remembered entry costs one stretching (about a tenth of a second) when a PIN is changed. A policy value above 24 is read as 24, and `GetPinRules` still reports the policy's own number.
+4. **When it is checked.** Only in `ChangePin`, and only after the current PIN has been proved right to the TPM, so that nobody who does not know the current PIN can learn from the answer whether a PIN is a former one. A reused PIN ends the prompt in `failure`, nothing is changed, and the person is told the PIN was used before.
+5. **When an entry is added.** After the TPM has changed the key and the record is written: the replaced PIN becomes the newest entry and the list is cut to the limit, in the same atomic write as the new blobs, so a crash leaves either the old PIN with its old list or the new PIN with the new one.
+6. **`SetPin`** starts an empty history. A reset ([ADR-0003](0003-destructive-reset.md)) deletes the record and so the history with it.
+7. **Expiry** (`pin.expiry_days`) is not decided here: it needs the Agent to say at sign-in that a PIN has expired, which is a decision for the sign-in flow.
+8. **Tests the code will name:** `a_replaced_pin_cannot_be_used_again_within_the_history`, `the_history_is_only_asked_after_the_current_pin_is_right`, `the_history_never_holds_a_key_authorisation`, `an_old_record_without_a_history_is_read`, `a_record_with_a_malformed_history_is_untrusted`, `a_change_that_fails_leaves_the_history_alone`.
+
 ## Consequences
 
 **Easier:** the PIN is out of the bus daemon's reach, logs and buffers; one place checks the caller and the subject.
