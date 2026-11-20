@@ -126,6 +126,10 @@ Web Authentication, the W3C standard that lets a web page create and use passkey
 
 The TPM's protection against guessing: after a number of wrong authorisation values it refuses all tries for a while. The TPM keeps one counter for the whole machine, so Linux Hello also counts each user's wrong PINs itself and stops them before they reach the TPM. Linux Hello never changes the TPM's own settings for this. Also called dictionary-attack protection.
 
+### Encrypted TPM session
+
+A conversation with the TPM in which the sensitive parts of each command, such as the authorisation value, are scrambled with a key that only this program and the TPM can work out. Linux Hello starts one for every command that carries or proves the user's PIN-derived value: the key is agreed by encrypting a random number to a key inside the TPM, so someone who records everything that passes between the program and the chip cannot derive it. Without it, the plain "password session" would send the value in clear (ADR-0021, decision 3).
+
 ### Authorisation value
 
 A secret that must be given to the TPM before it lets a program use a key, similar to a password for that key. Linux Hello uses the PIN as the authorisation value of the user's *root key*.
@@ -369,6 +373,10 @@ In Linux Hello, the user's main secret and the *root* of trust: the TPM checks i
 ### PIN-only state
 
 The safe state the *policy* engine enters when a policy file cannot be trusted, for example because it is damaged or writable by others. Only the PIN works, biometrics are off, and passkeys need the PIN for every use. The details are in the [policy semantics](https://github.com/LinuxHello/linux-hello/blob/main/docs/architecture/policy-semantics.md#fail-closed).
+
+### PIN history
+
+The list of fingerprints of the PINs a user has replaced, kept in the user's PIN record, so that a change cannot go back to a former PIN (the policy key `pin.history` says how many are remembered). A fingerprint is the PIN put through the same slow function as the PIN itself, under a salt of its own, so it cannot open any key and cannot be turned back into the PIN faster than a PIN can be guessed.
 
 ### PIN socket
 

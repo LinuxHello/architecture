@@ -214,7 +214,7 @@ Step by step:
 1. The settings page warns before anything happens, because the reset cannot be undone.
 2. The Agent's Reset Coordinator has PAM check the account password, or the administrator's. The password authorises the reset and nothing else: it never unlocks a key.
 3. The Agent deletes the user's [root key](12-glossary.md#root-key) in the TPM. Every device-bound passkey was created under it, so all of them become unusable at once. The audit log records the reset.
-4. The user chooses a new PIN. Like every PIN, it reaches the Agent outside D-Bus messages ([ADR-0021](../adr/0021-pin-transport.md)), and the TPM creates a new root key with it as the authorisation.
+4. The user chooses a new PIN. The settings page or `linuxhello-ctl pin set` starts `SetPin` and sends the PIN like every PIN, outside D-Bus messages ([ADR-0021](../adr/0021-pin-transport.md)); the Agent checks it against the policy's PIN rules and the TPM creates a new root key with it as the authorisation. (`SetPin`, `ChangePin` and the command are built; the reset that precedes them is not.)
 5. Recovery happens at the websites, one by one: the user signs in there another way and registers a new passkey.
 
 **What to notice.**

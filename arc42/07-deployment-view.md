@@ -49,11 +49,13 @@ The table lists every file that installing the Agent puts on the computer. The f
 
 **It starts on demand and comes back after a failure.** The Agent starts at boot, before the login screen. If it is stopped anyway, the first call to it starts it again, through the bus activation file. If it crashes, systemd restarts it after one second. If it hangs, a [watchdog](12-glossary.md#watchdog) notices: the Agent tells systemd that it is alive only after it has answered a call to itself over the bus, and if 30 seconds pass without that message, systemd restarts it. A restart loses every open sign-in attempt and every subscription, so every client follows one rule for what to do when that happens ([what a client does when the Agent restarts](https://github.com/LinuxHello/linux-hello/blob/main/docs/architecture/agent-restart.md)).
 
-### The PIN socket, not installed yet
+### The PIN socket and the TPM provider
 
-[ADR-0021](../adr/0021-pin-transport.md) gives the Agent a second way in: a local socket that carries the PIN from the PAM module and nothing else, so that the PIN never passes through the bus daemon. Its code is in the Agent (`pinsocket.rs`, with tests), but nothing starts it yet: the bus call that announces a PIN, the PIN check and the client in the PAM module are still to come.
+[ADR-0021](../adr/0021-pin-transport.md) gives the Agent a second way in: a local socket that carries the PIN and nothing else, so that the PIN never passes through the bus daemon. The Agent creates it as `/run/linuxhello/pin.sock`, in a directory that only the user `linuxhello` can change, and the AppArmor profile has a rule for it. A program announces the PIN over the bus with `ExpectPin` and then sends it on the socket; the Agent asks the kernel who is at the other end and accepts one PIN from exactly that program. The bus and this socket are the Agent's only two ways in.
 
-When they are built, the installation gains four things: the socket, in a directory that only the user `linuxhello` can change; a rule for it in the AppArmor profile; nothing new in the unit's list of allowed socket kinds, because local sockets (`AF_UNIX`) are already the only kind allowed; and a test that a process of another user cannot use it. The bus and this socket will then be the Agent's only two ways in, and the deployment diagram will show the socket.
+The Agent has no TPM library of its own. A second, small program, the **TPM provider**, talks to the chip and nothing else. It runs as its own user (`linuxhello-tpm`) under its own AppArmor profile, which allows the TPM device and one socket, `/run/linuxhello-tpm/tpm.sock`, and denies the bus, the network and the Agent's files. Only the Agent's user may connect to that socket. The Agent sends it a stretched PIN, never the PIN, and the provider speaks to the TPM in an encrypted session.
+
+Both programs have their own unit, bus policy where needed, system-user entry and profile under `security/` in the code repository, and both were installed in a virtual machine the way a package would and tested together: a user set a PIN with `linuxhello-ctl pin set`, changed it, and the TPM accepted only the new one. That test used a software TPM, on Ubuntu 26.04 only (the provider links system libraries, so it is built per release).
 
 ## 7.3 What has been tested
 
