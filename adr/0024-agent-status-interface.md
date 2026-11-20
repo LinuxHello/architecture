@@ -43,6 +43,19 @@ The bus policy lets any user call the Agent's methods and **denies reading prope
 9. **No signal in this decision.** A client calls `GetStatus` when it shows the screen and after the restart rule (`linuxhello_dbus::restart`). A `StatusChanged` signal can be added later without breaking anything; it would carry no payload and be unicast.
 10. **Tests the code will name:** `status_is_scoped_to_the_caller`, `status_never_carries_a_file_name`, `status_details_are_for_root_only`, `status_codes_are_a_closed_set`, and a bus test that a user and root get the answers above.
 
+### Amendment 2026-11-20 (accepted): two codes for the PIN path, `tpm-dictionary-limit-low` and `tpm-cleared`
+
+Point 3 left "the exact list of codes" open and said a new code is an additive change. The PIN path now reports two more, and codes cannot be renamed once shipped, so this fixes them.
+
+In plain words: the Trusted Platform Module (TPM, the chip that keeps the keys) has two properties that a person using a PIN should be told about. It locks every key after a number of wrong tries counted for all users together, so Linux Hello keeps its own limit below that number; when it has had to lower the limit, `GetStatus` says so. And when the chip was cleared or replaced, the key that the user's PIN opens is gone with it, so the PIN can no longer be used; `GetStatus` says that too, without anyone typing a PIN to find out.
+
+1. **`tpm-dictionary-limit-low`**, severity `warning`. Reported to every user while the Agent runs with a limit lowered because of the TPM's: "The TPM locks every PIN after N wrong tries, so Linux Hello allows only M wrong PINs before its own lockout." N is the TPM's number and M the Agent's. The Agent reads the TPM's number once, when it starts. It carries no detail.
+2. **`tpm-cleared`**, severity `severe`. Reported to a user who has a PIN record when the TPM does not hold the key of that record: "The TPM no longer holds the key that your PIN opens (it was cleared or replaced), so your PIN cannot be used until your enrolment is reset." The check asks the TPM provider to load the user's wrapped root key without a PIN. A cleared TPM has a new storage seed, so the wrapped key fails its integrity check; that counts nothing in the TPM's attempt counter. A damaged record gives the same answer, and the sentence says "cleared or replaced" because the check cannot tell these apart.
+3. **What is not claimed.** If the provider cannot be reached, or the user has no record, nothing is reported: an unknown answer is not a cleared TPM. A user sees only their own condition (point 2 of the ADR).
+4. **What the user can do.** Until the reset of [ADR-0003](0003-destructive-reset.md) is built, the sentence says the enrolment must be reset; the way to do that is the administrator's.
+5. **`doctor`.** `linuxhello-ctl doctor` reads files and runs no PIN probe, so it does not report `tpm-cleared`; `status` does, by the Agent's answer. A `doctor` that reports it for every user would need the Agent's root-only details call and is left for a later change.
+6. **Tests the code names:** `status_says_when_the_tpm_lowered_the_pin_limit`, `status_says_when_the_tpm_no_longer_holds_the_pin_key`, `a_key_from_a_tpm_that_was_cleared_is_told_apart_from_a_wrong_pin`, `a_pin_key_that_the_tpm_does_not_hold_is_told_apart_from_a_key_that_it_does`, `a_provider_that_is_not_there_claims_nothing_about_the_key`.
+
 ## Consequences
 
 **Easier:** the login and lock screens, the Settings page and `linuxhello-ctl` show one set of conditions with one vocabulary; a user sees what concerns them and nothing about anyone else; the interface stays additive.
