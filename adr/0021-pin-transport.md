@@ -14,7 +14,7 @@ date: 2026-11-15
 
 ## Status
 
-Accepted, 2026-11-15, on the maintainer's decision the same day (proposed 2026-11-15). Amends [ADR-0014](0014-agent-bus.md) for the PIN only. Answers [issue 140](https://github.com/LinuxHello/linux-hello/issues/140). The maintainer chose the dedicated Agent socket (option A below) and accepted decisions 2 to 5 as written. Amendment accepted 2026-11-18, on the maintainer's decision the same day (proposed 2026-11-18): the control call is `ExpectPin(prompt_id)` (see *Amendment 2026-11-18*). Amendment accepted 2026-11-19, on the maintainer's standing approval of the lead's recommendations (proposed 2026-11-19): the parameters of the PIN stretching (see *Amendment 2026-11-19*).
+Accepted, 2026-11-15, on the maintainer's decision the same day (proposed 2026-11-15). Amends [ADR-0014](0014-agent-bus.md) for the PIN only. Answers [issue 140](https://github.com/LinuxHello/linux-hello/issues/140). The maintainer chose the dedicated Agent socket (option A below) and accepted decisions 2 to 5 as written. Amendment accepted 2026-11-18, on the maintainer's decision the same day (proposed 2026-11-18): the control call is `ExpectPin(prompt_id)` (see *Amendment 2026-11-18*). Amendment accepted 2026-11-19, on the maintainer's standing approval of the lead's recommendations (proposed 2026-11-19): the parameters of the PIN stretching (see *Amendment 2026-11-19*). Amendment proposed 2026-11-21: when a PIN expires and what happens then (see *Amendment 2026-11-21*).
 
 ## Context
 
@@ -96,8 +96,39 @@ In plain words: when a PIN is changed, the Agent keeps a fingerprint of the PIN 
 4. **When it is checked.** Only in `ChangePin`, and only after the current PIN has been proved right to the TPM, so that nobody who does not know the current PIN can learn from the answer whether a PIN is a former one. A reused PIN ends the prompt in `failure`, nothing is changed, and the person is told the PIN was used before.
 5. **When an entry is added.** After the TPM has changed the key and the record is written: the replaced PIN becomes the newest entry and the list is cut to the limit, in the same atomic write as the new blobs, so a crash leaves either the old PIN with its old list or the new PIN with the new one.
 6. **`SetPin`** starts an empty history. A reset ([ADR-0003](0003-destructive-reset.md)) deletes the record and so the history with it.
-7. **Expiry** (`pin.expiry_days`) is not decided here: it needs the Agent to say at sign-in that a PIN has expired, which is a decision for the sign-in flow.
+7. **Expiry** (`pin.expiry_days`) is not decided here: it needs the Agent to say at sign-in that a PIN has expired, which is a decision for the sign-in flow. (Decided in the amendment of 2026-11-21.)
 8. **Tests the code will name:** `a_replaced_pin_cannot_be_used_again_within_the_history`, `the_history_is_only_asked_after_the_current_pin_is_right`, `the_history_never_holds_a_key_authorisation`, `an_old_record_without_a_history_is_read`, `a_record_with_a_malformed_history_is_untrusted`, `a_change_that_fails_leaves_the_history_alone`.
+
+### Amendment 2026-11-21 (proposed): when a PIN expires, and what happens then
+
+The policy has a key `pin.expiry_days`: after how many days a person must change their PIN (1 to 730; without it a PIN never expires). The policy files already accept the key, but nothing acts on it. Acting on it needs two things that cannot be taken back once shipped: a date stored in the user's record, which later versions must read, and the codes that tell the person, which clients will match on ([ADR-0024](0024-agent-status-interface.md), point 3). So this amendment fixes both.
+
+In plain words: the Agent writes down when the PIN was last set or changed. When the policy's number of days has passed since then, the PIN has expired. An expired PIN **keeps working**; the person is told, on every screen that shows the Agent's status, that the PIN has expired and should be changed. From two weeks before, they are told it will expire soon. Changing the PIN starts the count again.
+
+| Option | What happens when the PIN has expired | Pros | Cons |
+| :-- | :-- | :-- | :-- |
+| **A. Tell, do not refuse** | The PIN works; `GetStatus` reports `pin-expired` until it is changed | Nobody is locked out; needs nothing from the login screen that does not exist yet; the stored data also serves B later | The setting is a strong reminder, not a guarantee: a person can ignore it |
+| B. Force a change at the next session sign-in | The PIN works at the login and lock screens, and the screen then makes the person run `ChangePin` before the session opens | The rule is kept | The login and lock screens do not exist yet ([ADR-0016](0016-prompt-hosts.md)); a change that fails at that moment blocks the session |
+| C. Refuse the expired PIN | The PIN fails like a wrong one | The rule is kept without help from any screen | The person falls back to the account password, which in [ADR-0003](0003-destructive-reset.md) resets the enrolment and destroys the device-bound passkeys. A policy setting must never destroy keys |
+
+**Option A**, with the stored data chosen so that B can be added later as an additive change, once the login and lock screens can run a PIN change.
+
+1. **What expiry means.** A PIN has expired when `pin.expiry_days` days (of 86,400 seconds each) have passed since it was last set or changed. An expired PIN is still the authorisation of the root key and is accepted as before; the `Result` of a sign-in with it is `success`, with no new reason. *Why:* refusing it would leave the person only the account password, and that is the destructive reset (option C).
+2. **What is stored.** The user's record (`pin-root.toml`) gains `changed_at`: the time of the last `SetPin` or `ChangePin`, as whole seconds since 1970-01-01 UTC (a Unix time). It is written in the same atomic write as the blobs and the history, so a crash leaves the old time with the old PIN or the new time with the new one. A value that is not a whole number of zero or more makes the record untrusted, as every other malformed field does. The record's version stays 1, because an Agent that does not know the field ignores it.
+3. **A record from before this amendment.** A record without `changed_at` counts from the time the file was last modified. Only `SetPin` and `ChangePin` write the file, so that is when the PIN was last set. The Agent does not write the field until the next change.
+4. **Which number of days.** The user's effective policy at the moment of the check: the administrator's layer merged with the user's own, where the user can only make it shorter ([ADR-0018](0018-user-policy-layer.md)). No expiry date is stored, so a policy that lowers the number applies at once to PINs that already exist, and removing the key ends expiry for everyone.
+5. **A clock that goes back.** If `changed_at` lies in the future (the clock was set back, or the record came from a machine with a different clock), the PIN counts as changed now: it has not expired, and the reminder starts later. Only root can set the clock, and root can change the policy anyway, so an earlier expiry is not something worth defending against here.
+6. **How the person is told.** Two new codes of `GetStatus`, both severity `warning`, both only for the caller's own PIN, and only when the caller has a PIN record and the effective policy sets `pin.expiry_days`:
+   - **`pin-expires-soon`**, from 14 days before the PIN expires: "Your PIN expires in N days. Change it with linuxhello-ctl pin change." N is the number of days left, rounded up, at least 1. The 14 days are fixed; with an expiry shorter than 14 days the reminder runs from the start.
+   - **`pin-expired`**, from the moment it expires until the PIN is changed: "Your PIN has expired. It still works, but change it now with linuxhello-ctl pin change."
+
+   Once the system settings page exists the sentences can name it; a sentence may change, a code may not (ADR-0024, points 3 and 5).
+7. **What starts and ends the count.** `SetPin` writes the first `changed_at`. `ChangePin` writes a new one, only when the change succeeds; a change that fails leaves the old time, as it leaves the old PIN and the history. A reset ([ADR-0003](0003-destructive-reset.md)) deletes the record and the time with it.
+8. **Where the message reaches the person.** In `linuxhello-ctl status`, and on the login and lock screens through `GetStatus` ([#213](https://github.com/LinuxHello/linux-hello/issues/213)). The PAM module is not changed: it stays the thin client of [ADR-0023](0023-pam-module-and-login-failure.md). `linuxhello-ctl doctor` reads files and checks no user's PIN, so it does not report these codes.
+9. **Later, option B.** A later amendment may make the login and lock screens ask for `ChangePin` when they see `pin-expired`. That needs no change to the record or to the codes above.
+10. **Tests the code will name:** `a_pin_expires_after_the_policys_days`, `an_expired_pin_still_signs_in`, `status_says_a_pin_expires_soon_from_fourteen_days_before`, `a_change_starts_the_count_again`, `a_change_that_fails_keeps_the_old_time`, `a_record_without_a_time_counts_from_the_files_modification`, `a_time_in_the_future_counts_as_now`, `a_record_with_a_malformed_time_is_untrusted`, `no_expiry_is_reported_without_the_policy_key_or_without_a_pin`.
+
+Not decided here: option B, and the wording of the sentences in the system settings page, which does not exist yet.
 
 ## Consequences
 
