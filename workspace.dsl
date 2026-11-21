@@ -31,7 +31,7 @@ workspace "Linux Hello" "Biometric- and PIN-gated passkeys and secrets for the L
 
             pamModule = container "pam_linuxhello" "Thin synchronous PAM client of the Agent: opens the prompt, waits with a hard deadline and maps the answer to a PAM code (ADR-0023)" "Rust cdylib, Linux-PAM" {
                 pamEntry = component "PAM Entry Points" "pam_sm_authenticate and pam_sm_open_session" "Rust FFI"
-                agentClient = component "Agent Client" "Opens the prompt and hands the conversation to the Agent's orchestrator over the system bus; connects within 250 ms and waits within the policy deadline; sends the PIN to the Agent's PIN socket, never as a D-Bus message; returns PAM_AUTHINFO_UNAVAIL when Linux Hello is unavailable and never PAM_SUCCESS for that case (P-20); starts no thread, executor or subprocess in the host process (ADR-0023)" "Rust, synchronous zbus"
+                agentClient = component "Agent Client" "Opens the prompt and hands the conversation to the Agent's orchestrator over the system bus; connects within 250 ms and waits within the policy deadline; sends the PIN to the Agent's PIN socket, never as a D-Bus message; returns PAM_AUTHINFO_UNAVAIL when Linux Hello is unavailable and never PAM_SUCCESS for that case (P-20); starts no thread, executor or subprocess in the host process (ADR-0023)" "Rust, synchronous; its own D-Bus codec, no zbus (ADR-0023, amendment 2026-11-21)"
             }
 
             tpmProvider = container "TPM Credential Provider" "Device-bound passkeys under the per-user TPM root key" "Rust daemon" {
